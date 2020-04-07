@@ -7,16 +7,14 @@ package io.ktor.client.engine.cio
 import io.ktor.client.features.*
 import io.ktor.client.request.*
 import io.ktor.network.sockets.*
-import io.ktor.network.sockets.Socket
 import io.ktor.network.tls.*
+import io.ktor.network.util.*
 import io.ktor.util.*
 import io.ktor.util.date.*
+import io.ktor.utils.io.core.*
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
-import java.io.*
-import java.net.*
-import java.nio.channels.*
+import kotlinx.coroutines.channels.*
 import kotlin.coroutines.*
 
 internal class Endpoint(
@@ -29,44 +27,52 @@ internal class Endpoint(
     override val coroutineContext: CoroutineContext,
     private val onDone: () -> Unit
 ) : CoroutineScope, Closeable {
+    private val address = NetworkAddress(host, port)
+
     private val connections: AtomicInt = atomic(0)
     private val tasks: Channel<RequestTask> = Channel(Channel.UNLIMITED)
     private val deliveryPoint: Channel<RequestTask> = Channel()
 
     private val maxEndpointIdleTime: Long = 2 * config.endpoint.connectTimeout
 
-    private val postman = launch(start = CoroutineStart.LAZY) {
-        try {
-            while (true) {
-                val task = withTimeout(maxEndpointIdleTime) {
-                    tasks.receive()
-                }
+//    private val postman = launch(start = CoroutineStart.LAZY) {
+//        try {
+//            while (true) {
+//                val task = withTimeout(maxEndpointIdleTime) {
+//                    tasks.receive()
+//                }
+//
+//                try {
+//                    if (!config.pipelining || task.requiresDedicatedConnection()) {
+//                        makeDedicatedRequest(task)
+//                    } else {
+//                        makePipelineRequest(task)
+//                    }
+//                } catch (cause: Throwable) {
+//                    task.response.resumeWithException(cause)
+//                    throw cause
+//                }
+//            }
+//        } catch (cause: Throwable) {
+//        } finally {
+//            deliveryPoint.close()
+//            tasks.close()
+//            onDone()
+//        }
+//    }
 
-                try {
-                    if (!config.pipelining || task.requiresDedicatedConnection()) {
-                        makeDedicatedRequest(task)
-                    } else {
-                        makePipelineRequest(task)
-                    }
-                } catch (cause: Throwable) {
-                    task.response.resumeWithException(cause)
-                    throw cause
-                }
-            }
-        } catch (cause: Throwable) {
-        } finally {
-            deliveryPoint.close()
-            tasks.close()
-            onDone()
-        }
+    init {
+        makeShared()
     }
 
     suspend fun execute(
         request: HttpRequestData,
         callContext: CoroutineContext
-    ): HttpResponseData = suspendCancellableCoroutine { continuation ->
-        val task = RequestTask(request, continuation, callContext)
-        tasks.offer(task)
+    ): HttpResponseData = if (!config.pipelining || request.requiresDedicatedConnection()) {
+        makeDedicatedRequest(request, callContext).await()
+    } else {
+        TODO()
+//            makePipelineRequest(TODO())
     }
 
     private suspend fun makePipelineRequest(task: RequestTask) {
@@ -86,45 +92,53 @@ internal class Endpoint(
     }
 
     private fun makeDedicatedRequest(
-        task: RequestTask
-    ): Job = launch(task.context + CoroutineName("DedicatedRequest")) {
-        val (request, response, callContext) = task
-        try {
-            val connection = connect(request)
-            val input = this@Endpoint.mapEngineExceptions(connection.openReadChannel(), task.request)
-            val output = this@Endpoint.mapEngineExceptions(connection.openWriteChannel(), task.request)
+        request: HttpRequestData, callContext: CoroutineContext
+    ): Deferred<HttpResponseData> {
+        callContext.makeShared()
 
-            val requestTime = GMTDate()
+        println(coroutineContext)
+        println(callContext)
+        return async(callContext + CoroutineName("DedicatedRequest")) {
+            println(coroutineContext)
+            try {
+                val job = coroutineContext[Job]
+                val connection = connect(request)
+                val input =
+                    connection.openReadChannel() // this@Endpoint.mapEngineExceptions(connection.openReadChannel(), request)
+                val originOutput =
+                    connection.openWriteChannel() // this@Endpoint.mapEngineExceptions(connection.openWriteChannel(), request)
+                val output = originOutput.handleHalfClosed(
+                    coroutineContext, config.endpoint.allowHalfClose
+                )
 
-            callContext[Job]!!.invokeOnCompletion { cause ->
-                try {
-                    input.cancel(cause)
-                    output.close(cause)
-                    connection.close()
-                    releaseConnection()
-                } catch (_: Throwable) {
+                val requestTime = GMTDate()
+
+                callContext[Job]!!.invokeOnCompletion { cause ->
+                    try {
+                        input.cancel(cause)
+                        originOutput.close(cause)
+                        connection.close()
+                        releaseConnection()
+                    } catch (_: Throwable) {
+                    }
                 }
-            }
 
-            val timeout = config.requestTimeout
-            val writeRequestAndReadResponse: suspend CoroutineScope.() -> HttpResponseData = {
-                request.write(output.wrap(callContext, config.endpoint.allowHalfClose), callContext, overProxy)
-                readResponse(requestTime, request, input, output, callContext)
-            }
+                val timeout = config.requestTimeout
+                val writeRequestAndReadResponse: suspend CoroutineScope.() -> HttpResponseData = {
+                    request.write(output, callContext, overProxy)
+                    readResponse(requestTime, request, input, originOutput, callContext)
+                }
 
-            val responseData = if (timeout == HttpTimeout.INFINITE_TIMEOUT_MS) {
-                writeRequestAndReadResponse()
-            } else {
-                withTimeout(timeout, writeRequestAndReadResponse)
-            }
+                val responseData = if (timeout == HttpTimeout.INFINITE_TIMEOUT_MS) {
+                    writeRequestAndReadResponse()
+                } else {
+                    withTimeout(timeout, writeRequestAndReadResponse)
+                }
 
-            response.resume(responseData)
-        } catch (cause: Throwable) {
-            val mappedException = when (cause.rootCause) {
-                is java.net.SocketTimeoutException -> SocketTimeoutException(task.request, cause)
-                else -> cause
+                return@async responseData
+            } catch (cause: Throwable) {
+                throw cause.mapToKtor(request)
             }
-            response.resumeWithException(mappedException)
         }
     }
 
@@ -151,9 +165,11 @@ internal class Endpoint(
 
         try {
             repeat(retryAttempts) {
-                val address = InetSocketAddress(host, port)
+                val address = NetworkAddress(host, port)
 
-                if (address.isUnresolved) throw UnresolvedAddressException()
+                if (!address.isResolved) {
+                    throw UnresolvedAddressException()
+                }
 
                 val connect: suspend CoroutineScope.() -> Socket = {
                     connectionFactory.connect(address) {
@@ -176,15 +192,7 @@ internal class Endpoint(
                 if (!secure) return@connect connection
 
                 try {
-                    with(config.https) {
-                        return@connect connection.tls(coroutineContext) {
-                            trustManager = this@with.trustManager
-                            random = this@with.random
-                            cipherSuites = this@with.cipherSuites
-                            serverName = this@with.serverName ?: address.hostName
-                            certificates += this@with.certificates
-                        }
-                    }
+                    return connection.tls(coroutineContext, config.https.build())
                 } catch (cause: Throwable) {
                     try {
                         connection.close()
@@ -208,7 +216,7 @@ internal class Endpoint(
     /**
      * Defines exact type of exception based on [retryAttempts] and [timeoutFails].
      */
-    private fun getTimeoutException(retryAttempts: Int, timeoutFails: Int, request: HttpRequestData) =
+    private fun getTimeoutException(retryAttempts: Int, timeoutFails: Int, request: HttpRequestData): Exception =
         when (timeoutFails) {
             retryAttempts -> ConnectTimeoutException(request)
             else -> FailToConnectException()
@@ -233,10 +241,6 @@ internal class Endpoint(
     override fun close() {
         tasks.close()
     }
-
-    init {
-        postman.start()
-    }
 }
 
 @Suppress("KDocMissingDocumentation")
@@ -249,3 +253,5 @@ open class ConnectException : Exception("Connect timed out or retry attempts exc
 @Suppress("KDocMissingDocumentation")
 @KtorExperimentalAPI
 class FailToConnectException : Exception("Connect timed out or retry attempts exceeded")
+
+internal expect fun Throwable.mapToKtor(request: HttpRequestData): Throwable

@@ -12,6 +12,7 @@ import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.util.*
 import io.ktor.util.date.*
+import io.ktor.utils.io.*
 import kotlinx.coroutines.*
 import kotlin.coroutines.*
 
@@ -85,7 +86,13 @@ class HttpRequestBuilder : HttpMessageBuilder {
      */
     @KtorExperimentalAPI
     var executionContext: Job = Job()
-        internal set
+        internal set(value) {
+            println("Set ec: $value")
+            Exception().printStack()
+            value.makeShared()
+            println("Set ec done: $value")
+            field = value
+        }
 
     /**
      * Call specific attributes.
