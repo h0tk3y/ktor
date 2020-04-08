@@ -3,14 +3,13 @@
  */
 package io.ktor.network.selector
 
-import io.ktor.util.*
 import io.ktor.util.collections.*
 import kotlinx.coroutines.*
 import kotlin.coroutines.*
 import kotlin.native.concurrent.*
 
 
-class WorkerSelectorManager : SelectorManager {
+public class WorkerSelectorManager : SelectorManager {
     private val selectorContext = newSingleThreadContext("WorkerSelectorManager")
     override val coroutineContext: CoroutineContext = selectorContext
     override fun notifyClosed(selectable: Selectable) {}

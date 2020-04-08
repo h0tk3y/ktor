@@ -1,9 +1,10 @@
 package io.ktor.network.util
 
-expect class NetworkAddress(hostname: String, port: Int)
+public expect class NetworkAddress(hostname: String, port: Int)
 
-expect val NetworkAddress.hostname: String
-expect val NetworkAddress.port: Int
-expect val NetworkAddress.isResolved: Boolean
+public expect val NetworkAddress.hostname: String
+public expect val NetworkAddress.port: Int
 
-expect class UnresolvedAddressException() : IllegalArgumentException
+public expect val NetworkAddress.isResolved: Boolean
+
+public expect class UnresolvedAddressException() : IllegalArgumentException
