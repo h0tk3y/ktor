@@ -167,10 +167,6 @@ internal class Endpoint(
             repeat(retryAttempts) {
                 val address = NetworkAddress(host, port)
 
-                if (!address.isResolved) {
-                    throw UnresolvedAddressException()
-                }
-
                 val connect: suspend CoroutineScope.() -> Socket = {
                     connectionFactory.connect(address) {
                         this.socketTimeout = socketTimeout

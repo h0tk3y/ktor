@@ -16,6 +16,3 @@ public actual val NetworkAddress.port: Int
     get() = port
 
 public actual class UnresolvedAddressException : IllegalArgumentException()
-
-public actual val NetworkAddress.isResolved: Boolean
-    get() = error("isResolved property is unsupported on JS platform")

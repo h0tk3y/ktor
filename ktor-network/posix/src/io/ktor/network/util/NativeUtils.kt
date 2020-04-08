@@ -4,13 +4,14 @@
 
 package io.ktor.network.util
 
+import io.ktor.utils.io.errors.*
+
 
 internal inline fun Int.check(
-    message: String = "Native method failed with $this.",
     block: (Int) -> Boolean = { it >= 0 }
 ): Int {
     if (!block(this)) {
-        error(message)
+        throw PosixException.forErrno()
     }
 
     return this

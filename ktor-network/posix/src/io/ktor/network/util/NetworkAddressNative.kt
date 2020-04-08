@@ -6,25 +6,30 @@ package io.ktor.network.util
 
 import io.ktor.util.*
 
-public actual class NetworkAddress actual constructor(
+public actual class NetworkAddress constructor(
     public val hostname: String,
-    public val port: Int
+    public val port: Int,
+    address: SocketAddress? = null
 ) {
-    internal val address: SocketAddress
-        get() = resolvedRoutes.first()
+    public actual constructor(
+        hostname: String, port: Int
+    ) : this(hostname, port, null)
 
-    internal val resolvedRoutes = getAddressInfo(hostname, port)
+    public val address: SocketAddress
 
     init {
+        this.address = address ?: resolve().first()
         makeShared()
     }
+
+    /**
+     * Resolve current socket address.
+     */
+    public fun resolve(): List<SocketAddress> = getAddressInfo(hostname, port)
 }
 
 public actual val NetworkAddress.hostname: String get() = hostname
 
 public actual val NetworkAddress.port: Int get() = port
-
-public actual val NetworkAddress.isResolved: Boolean
-    get() = resolvedRoutes.isNotEmpty()
 
 public actual class UnresolvedAddressException : IllegalArgumentException()

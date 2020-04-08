@@ -7,11 +7,19 @@ package io.ktor.network.util
 import kotlinx.cinterop.*
 import platform.posix.*
 
-internal sealed class SocketAddress(
-    val family: sa_family_t,
-    val port: Int
+/**
+ * Represents pair of network ip and port.
+ */
+public sealed class SocketAddress(
+    public val family: sa_family_t,
+    public val port: Int
 ) {
     internal abstract fun nativeAddress(block: (address: CPointer<sockaddr>, size: socklen_t) -> Unit)
+
+    /**
+     * String representation of socket address part.
+     */
+    public abstract val address: String
 }
 
 internal class IPv4Address(
@@ -30,6 +38,7 @@ internal class IPv4Address(
             block(ptr.reinterpret(), sockaddr_in.size.convert())
         }
     }
+
 }
 
 internal class IPv6Address(
@@ -39,16 +48,21 @@ internal class IPv6Address(
     private val flowInfo: uint32_t,
     private val scopeId: uint32_t
 ) : SocketAddress(family, port) {
-//    private val ip = rawAddress.__u6_addr.readBytes(16)
+    private val ip = ByteArray(16) {
+        rawAddress.__u6_addr.__u6_addr8[it].toByte()
+    }
 
     override fun nativeAddress(block: (address: CPointer<sockaddr>, size: socklen_t) -> Unit) {
         cValue<sockaddr_in6> {
-            sin6_flowinfo = flowInfo
             sin6_family = family
+
+            ip.forEachIndexed { index, byte ->
+                sin6_addr.__u6_addr.__u6_addr8[index] = byte.convert()
+            }
+
+            sin6_flowinfo = flowInfo
             sin6_port = port.convert()
             sin6_scope_id = scopeId
-
-            TODO()
 
             block(ptr.reinterpret(), sockaddr_in6.size.convert())
         }

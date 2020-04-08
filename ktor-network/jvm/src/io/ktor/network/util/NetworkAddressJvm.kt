@@ -11,6 +11,3 @@ public actual val NetworkAddress.port: Int
     get() = port
 
 public actual typealias UnresolvedAddressException = java.nio.channels.UnresolvedAddressException
-
-public actual val NetworkAddress.isResolved: Boolean
-    get() = true
