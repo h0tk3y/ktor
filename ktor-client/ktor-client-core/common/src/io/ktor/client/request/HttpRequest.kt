@@ -12,7 +12,6 @@ import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.util.*
 import io.ktor.util.date.*
-import io.ktor.utils.io.*
 import kotlinx.coroutines.*
 import kotlin.coroutines.*
 
@@ -85,12 +84,9 @@ class HttpRequestBuilder : HttpMessageBuilder {
      * A deferred used to control the execution of this request.
      */
     @KtorExperimentalAPI
-    var executionContext: Job = Job()
+    public var executionContext: Job = Job().also { it.makeShared() }
         internal set(value) {
-            println("Set ec: $value")
-            Exception().printStack()
             value.makeShared()
-            println("Set ec done: $value")
             field = value
         }
 

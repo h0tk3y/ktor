@@ -27,9 +27,13 @@ public expect class SocketTimeoutException(message: String, cause: Throwable? = 
  */
 @InternalAPI
 public fun CoroutineScope.mapEngineExceptions(input: ByteReadChannel, request: HttpRequestData): ByteReadChannel {
+    if (PlatformUtils.IS_NATIVE) {
+        return input
+    }
+
     val replacementChannel = ByteChannelWithMappedExceptions(request)
 
-    writer(coroutineContext, replacementChannel) {
+    writer(channel = replacementChannel) {
         try {
             input.joinTo(replacementChannel, closeOnEnd = true)
         } catch (cause: Throwable) {
@@ -46,9 +50,13 @@ public fun CoroutineScope.mapEngineExceptions(input: ByteReadChannel, request: H
  */
 @InternalAPI
 public fun CoroutineScope.mapEngineExceptions(input: ByteWriteChannel, request: HttpRequestData): ByteWriteChannel {
+    if (PlatformUtils.IS_NATIVE) {
+        return input
+    }
+
     val replacementChannel = ByteChannelWithMappedExceptions(request)
 
-    writer(coroutineContext, replacementChannel) {
+    writer(channel = replacementChannel) {
         try {
             replacementChannel.joinTo(input, closeOnEnd = true)
         } catch (cause: Throwable) {

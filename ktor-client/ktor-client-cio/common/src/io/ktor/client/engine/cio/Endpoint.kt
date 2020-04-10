@@ -11,6 +11,7 @@ import io.ktor.network.tls.*
 import io.ktor.network.util.*
 import io.ktor.util.*
 import io.ktor.util.date.*
+import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
@@ -94,24 +95,15 @@ internal class Endpoint(
     private fun makeDedicatedRequest(
         request: HttpRequestData, callContext: CoroutineContext
     ): Deferred<HttpResponseData> {
-        callContext.makeShared()
-
-        println(coroutineContext)
-        println(callContext)
         return async(callContext + CoroutineName("DedicatedRequest")) {
-            println(coroutineContext)
             try {
-                val job = coroutineContext[Job]
                 val connection = connect(request)
-                val input =
-                    connection.openReadChannel() // this@Endpoint.mapEngineExceptions(connection.openReadChannel(), request)
-                val originOutput =
-                    connection.openWriteChannel() // this@Endpoint.mapEngineExceptions(connection.openWriteChannel(), request)
+                val input = mapEngineExceptions(connection.openReadChannel(), request)
+                val originOutput = mapEngineExceptions(connection.openWriteChannel(), request)
+
                 val output = originOutput.handleHalfClosed(
                     coroutineContext, config.endpoint.allowHalfClose
                 )
-
-                val requestTime = GMTDate()
 
                 callContext[Job]!!.invokeOnCompletion { cause ->
                     try {
@@ -124,22 +116,32 @@ internal class Endpoint(
                 }
 
                 val timeout = config.requestTimeout
-                val writeRequestAndReadResponse: suspend CoroutineScope.() -> HttpResponseData = {
-                    request.write(output, callContext, overProxy)
-                    readResponse(requestTime, request, input, originOutput, callContext)
-                }
 
-                val responseData = if (timeout == HttpTimeout.INFINITE_TIMEOUT_MS) {
-                    writeRequestAndReadResponse()
-                } else {
-                    withTimeout(timeout, writeRequestAndReadResponse)
+                return@async handleTimeout(timeout) {
+                    writeRequestAndReadResponse(request, output, callContext, input, originOutput)
                 }
-
-                return@async responseData
             } catch (cause: Throwable) {
                 throw cause.mapToKtor(request)
             }
         }
+    }
+
+    private suspend fun <T> CoroutineScope.handleTimeout(
+        timeout: Long, block: suspend CoroutineScope.() -> T
+    ): T = if (timeout == HttpTimeout.INFINITE_TIMEOUT_MS) {
+        block()
+    } else {
+        withTimeout(timeout, block)
+    }
+
+    private suspend fun writeRequestAndReadResponse(
+        request: HttpRequestData, output: ByteWriteChannel, callContext: CoroutineContext,
+        input: ByteReadChannel, originOutput: ByteWriteChannel
+    ): HttpResponseData {
+        val requestTime = GMTDate()
+        request.write(output, callContext, overProxy)
+
+        return readResponse(requestTime, request, input, originOutput, callContext)
     }
 
     private suspend fun createPipeline() {

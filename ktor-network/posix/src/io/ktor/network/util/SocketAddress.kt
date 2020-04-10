@@ -39,6 +39,9 @@ internal class IPv4Address(
         }
     }
 
+    override val address: String
+        get() = TODO("Not yet implemented")
+
 }
 
 internal class IPv6Address(
@@ -67,4 +70,7 @@ internal class IPv6Address(
             block(ptr.reinterpret(), sockaddr_in6.size.convert())
         }
     }
+
+    override val address: String
+        get() = TODO("Not yet implemented")
 }

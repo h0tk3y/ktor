@@ -13,6 +13,7 @@ import io.ktor.network.selector.*
 import io.ktor.network.util.*
 import io.ktor.util.*
 import io.ktor.util.collections.*
+import io.ktor.util.debug.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import kotlin.coroutines.*
@@ -37,6 +38,13 @@ internal class CIOEngine(
 
     override val coroutineContext: CoroutineContext
 
+    private val proxy: ProxyConfig? = when (val type = config.proxy?.type) {
+        ProxyType.SOCKS,
+        null -> null
+        ProxyType.HTTP -> config.proxy
+        else -> throw IllegalStateException("Proxy of type $type is unsupported by CIO engine.")
+    }
+
     init {
         val parentContext = super.coroutineContext
         val parent = parentContext[Job]!!
@@ -49,27 +57,21 @@ internal class CIOEngine(
         val requestJob = requestField[Job]!!
         val selector = selectorManager
 
-        launch(parentContext) { }
-//        GlobalScope.launch(parentContext, start = CoroutineStart.ATOMIC) {
-//            try {
-//                requestJob.join()
-//            } finally {
-//                selector.close()
-//                selector.coroutineContext[Job]!!.join()
-//            }
-//        }
-    }
+        GlobalScope.launch(parentContext, start = CoroutineStart.ATOMIC) {
+            try {
+                requestJob.join()
+            } finally {
+                selector.close()
+                selector.coroutineContext[Job]!!.join()
+            }
+        }
 
-    private val proxy: ProxyConfig? = when (val type = config.proxy?.type) {
-        ProxyType.SOCKS,
-        null -> null
-        ProxyType.HTTP -> config.proxy
-        else -> throw IllegalStateException("Proxy of type $type is unsupported by CIO engine.")
+        makeShared()
     }
 
     override suspend fun execute(data: HttpRequestData): HttpResponseData {
         val callContext = callContext()
-        callContext[Job]!!.makeShared()
+        callContext.makeShared()
 
         while (coroutineContext.isActive) {
             val endpoint = selectEndpoint(data.url, proxy)
@@ -90,9 +92,11 @@ internal class CIOEngine(
 
     override fun close() {
         super.close()
+
         endpoints.forEach { (_, endpoint) ->
             endpoint.close()
         }
+
         (requestsJob[Job] as CompletableJob).complete()
     }
 
@@ -125,5 +129,8 @@ internal class CIOEngine(
 }
 
 @Suppress("KDocMissingDocumentation")
-@Deprecated("Use ClientEngineClosedException instead", replaceWith = ReplaceWith("ClientEngineClosedException"))
-class ClientClosedException(cause: Throwable? = null) : IllegalStateException("Client already closed", cause)
+@Deprecated(
+    "Use ClientEngineClosedException instead",
+    replaceWith = ReplaceWith("ClientEngineClosedException")
+)
+public class ClientClosedException(cause: Throwable? = null) : IllegalStateException("Client already closed", cause)

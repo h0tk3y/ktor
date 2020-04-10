@@ -7,6 +7,8 @@ import io.ktor.client.engine.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.request.*
 import io.ktor.util.*
+import io.ktor.util.debug.*
+import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
 import kotlin.coroutines.*
@@ -20,7 +22,6 @@ class CIONative {
         HttpClient(CIO).use { client ->
             val result = client.get<String>("http://www.google.ru/")
             println(result)
-            Unit
         }
     }
 }

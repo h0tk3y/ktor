@@ -4,6 +4,8 @@
 
 package io.ktor.client.engine
 
+import io.ktor.util.*
+import io.ktor.util.debug.*
 import kotlinx.coroutines.*
 import kotlin.coroutines.*
 
@@ -13,10 +15,18 @@ import kotlin.coroutines.*
  * call coroutine's name is "call-context".
  */
 internal actual suspend fun HttpClientEngine.createCallContext(parentJob: Job): CoroutineContext {
+    parentJob.makeShared()
+    debug("parent")
     val callJob = Job(parentJob)
+    callJob.makeShared()
+    debug("call")
     attachToUserJob(callJob)
+    debug("attached")
 
-    return functionContext() + callJob + CALL_COROUTINE
+    val result = functionContext() + callJob + CALL_COROUTINE
+    result.makeShared()
+    debug("result")
+    return result
 }
 
 private suspend inline fun functionContext(): CoroutineContext = coroutineContext

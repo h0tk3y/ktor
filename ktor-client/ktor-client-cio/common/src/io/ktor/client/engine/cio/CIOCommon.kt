@@ -15,6 +15,12 @@ import io.ktor.util.*
  */
 @KtorExperimentalAPI
 object CIO : HttpClientEngineFactory<CIOEngineConfig> {
+    init {
+        addToLoader()
+    }
+
     override fun create(block: CIOEngineConfig.() -> Unit): HttpClientEngine =
         CIOEngine(CIOEngineConfig().apply(block))
+
+    override fun toString() = "CIO"
 }

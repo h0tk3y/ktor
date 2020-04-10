@@ -11,7 +11,9 @@ import io.ktor.client.utils.*
 import io.ktor.http.*
 import io.ktor.http.cio.*
 import io.ktor.http.content.*
+import io.ktor.util.*
 import io.ktor.util.date.*
+import io.ktor.util.debug.*
 import io.ktor.utils.io.*
 import io.ktor.utils.io.errors.*
 import kotlinx.coroutines.*
@@ -50,7 +52,9 @@ internal suspend fun HttpRequestData.write(
             }
 
             builder.emptyLine()
-            output.writePacket(builder.build())
+            val requestPacket = builder.build()
+
+            output.writePacket(requestPacket)
             output.flush()
         } finally {
             builder.release()
