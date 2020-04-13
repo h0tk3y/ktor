@@ -46,7 +46,7 @@ actual interface Input : Closeable {
      * @return number of bytes copied to the [destination] possibly `0`
      * @throws Throwable when not enough bytes available to provide
      */
-    actual fun peekTo(
+    public actual fun peekTo(
         destination: Memory,
         destinationOffset: Long,
         offset: Long,
@@ -224,7 +224,7 @@ actual interface Input : Closeable {
         return peekTo(buffer)
     }
 
-    actual fun discard(n: Long): Long
+    public actual fun discard(n: Long): Long
 
     actual override fun close()
 }

@@ -1,3 +1,5 @@
+@file:Suppress("RedundantVisibilityModifier")
+
 package io.ktor.utils.io
 
 import io.ktor.utils.io.bits.*
@@ -30,69 +32,46 @@ public actual interface ByteReadChannel {
     public actual val isClosedForWrite: Boolean
 
     /**
-     * Byte order that is used for multi-byte read operations
-     * (such as [readShort], [readInt], [readLong], [readFloat], and [readDouble]).
-     */
-    @Deprecated(
-        "Setting byte order is no longer supported. Read/write in big endian and use reverseByteOrder() extensions.",
-        level = DeprecationLevel.ERROR
-    )
-    public actual var readByteOrder: ByteOrder
-
-    /**
      * Number of bytes read from the channel.
      * It is not guaranteed to be atomic so could be updated in the middle of long running read operation.
      */
-    @Deprecated("Don't use byte count")
     public actual val totalBytesRead: Long
 
     /**
-     * Reads all available bytes to [dst] buffer and returns immediately or suspends if no bytes available
+     * Reads all available bytes to [destination] buffer and returns immediately or suspends if no bytes available
      * @return number of bytes were read or `-1` if the channel has been closed
      */
-    public actual suspend fun readAvailable(dst: ByteArray, offset: Int, length: Int): Int
+    public actual suspend fun readAvailable(destination: ByteArray, offset: Int, length: Int): Int
 
     /**
-     * Reads all available bytes to [dst] buffer and returns immediately or suspends if no bytes available
+     * Reads all available bytes to [destination] buffer and returns immediately or suspends if no bytes available
      * @return number of bytes were read or `-1` if the channel has been closed
      */
-    public actual suspend fun readAvailable(dst: IoBuffer): Int
+    public suspend fun readAvailable(destination: CPointer<ByteVar>, offset: Int, length: Int): Int
 
     /**
-     * Reads all available bytes to [dst] buffer and returns immediately or suspends if no bytes available
+     * Reads all available bytes to [destination] buffer and returns immediately or suspends if no bytes available
      * @return number of bytes were read or `-1` if the channel has been closed
      */
-    public suspend fun readAvailable(dst: CPointer<ByteVar>, offset: Int, length: Int): Int
+    public suspend fun readAvailable(destination: CPointer<ByteVar>, offset: Long, length: Long): Int
 
     /**
-     * Reads all available bytes to [dst] buffer and returns immediately or suspends if no bytes available
-     * @return number of bytes were read or `-1` if the channel has been closed
-     */
-    public suspend fun readAvailable(dst: CPointer<ByteVar>, offset: Long, length: Long): Int
-
-    /**
-     * Reads all [length] bytes to [dst] buffer or fails if channel has been closed.
+     * Reads all [length] bytes to [destination] buffer or fails if channel has been closed.
      * Suspends if not enough bytes available.
      */
-    public actual suspend fun readFully(dst: ByteArray, offset: Int, length: Int)
+    public actual suspend fun readFully(destination: ByteArray, offset: Int, length: Int)
 
     /**
-     * Reads all [length] bytes to [dst] buffer or fails if channel has been closed.
+     * Reads all [length] bytes to [destination] buffer or fails if channel has been closed.
      * Suspends if not enough bytes available.
      */
-    public actual suspend fun readFully(dst: IoBuffer, n: Int)
+    public suspend fun readFully(destination: CPointer<ByteVar>, offset: Int, length: Int)
 
     /**
-     * Reads all [length] bytes to [dst] buffer or fails if channel has been closed.
+     * Reads all [length] bytes to [destination] buffer or fails if channel has been closed.
      * Suspends if not enough bytes available.
      */
-    public suspend fun readFully(dst: CPointer<ByteVar>, offset: Int, length: Int)
-
-    /**
-     * Reads all [length] bytes to [dst] buffer or fails if channel has been closed.
-     * Suspends if not enough bytes available.
-     */
-    public suspend fun readFully(dst: CPointer<ByteVar>, offset: Long, length: Long)
+    public suspend fun readFully(destination: CPointer<ByteVar>, offset: Long, length: Long)
 
     /**
      * Reads the specified amount of bytes and makes a byte packet from them. Fails if channel has been closed

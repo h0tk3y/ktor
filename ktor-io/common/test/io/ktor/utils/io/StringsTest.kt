@@ -6,7 +6,7 @@ import kotlin.test.*
 import kotlin.test.Test
 
 open class StringsTest : ByteChannelTestBase(true) {
-    private val channel: ByteChannel get() = ch
+    private val channel: ByteChannel get() = channel
 
     @Test
     fun testReadString() = runTest {

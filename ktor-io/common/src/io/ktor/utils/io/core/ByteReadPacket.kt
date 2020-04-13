@@ -2,7 +2,7 @@
 
 package io.ktor.utils.io.core
 
-import io.ktor.utils.io.bits.Memory
+import io.ktor.utils.io.bits.*
 import io.ktor.utils.io.core.internal.*
 import io.ktor.utils.io.pool.*
 
@@ -14,10 +14,6 @@ import io.ktor.utils.io.pool.*
 class ByteReadPacket internal constructor(head: ChunkBuffer, remaining: Long, pool: ObjectPool<ChunkBuffer>) :
     @Suppress("DEPRECATION_ERROR") ByteReadPacketPlatformBase(head, remaining, pool), Input {
     constructor(head: ChunkBuffer, pool: ObjectPool<ChunkBuffer>) : this(head, head.remainingAll(), pool)
-
-    @Suppress("DEPRECATION", "UNUSED")
-    @Deprecated("Binary compatibility.", level = DeprecationLevel.HIDDEN)
-    constructor(head: IoBuffer, pool: ObjectPool<ChunkBuffer>) : this(head, head.remainingAll(), pool)
 
     init {
         markNoMoreChunksAvailable()
@@ -64,9 +60,11 @@ abstract class ByteReadPacketPlatformBase protected constructor(
     pool: ObjectPool<ChunkBuffer>
 ) : ByteReadPacketBase(head, remaining, pool) {
     @Deprecated("Binary compatibility.", level = DeprecationLevel.HIDDEN)
-    constructor(head: IoBuffer,
-                remaining: Long,
-                pool: ObjectPool<ChunkBuffer>) : this(head as ChunkBuffer, remaining, pool)
+    constructor(
+        head: IoBuffer,
+        remaining: Long,
+        pool: ObjectPool<ChunkBuffer>
+    ) : this(head as ChunkBuffer, remaining, pool)
 }
 
 expect fun ByteReadPacket(

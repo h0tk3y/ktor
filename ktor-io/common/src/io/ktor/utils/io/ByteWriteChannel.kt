@@ -1,5 +1,6 @@
 package io.ktor.utils.io
 
+import io.ktor.utils.io.bits.*
 import io.ktor.utils.io.core.*
 
 /**
@@ -48,6 +49,12 @@ public expect interface ByteWriteChannel {
      * Crashes if channel get closed while writing.
      */
     public suspend fun writeFully(source: ByteArray, offset: Int = 0, length: Int = source.size)
+
+    /**
+     * Writes all [source] bytes from [offset] using [length] and suspends until all bytes written.
+     * Causes flush if buffer filled up or when [autoFlush]. Crashes if channel get closed while writing.
+     */
+    public suspend fun writeFully(source: Memory, offset: Int = 0, length: Int = source.size32)
 
     /**
      * Writes a [packet] fully or fails if channel get closed before the whole packet has been written

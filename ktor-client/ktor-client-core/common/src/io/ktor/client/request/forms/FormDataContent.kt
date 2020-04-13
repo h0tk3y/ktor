@@ -20,8 +20,8 @@ private val RN_BYTES = "\r\n".toByteArray()
  *
  * @param formData: data to send.
  */
-class FormDataContent(
-    val formData: Parameters
+public class FormDataContent(
+    public val formData: Parameters
 ) : OutgoingContent.ByteArrayContent() {
     private val content = formData.formUrlEncode().toByteArray()
 
@@ -148,14 +148,9 @@ private suspend fun Input.copyTo(channel: ByteWriteChannel) {
         return
     }
 
-    channel.writeSuspendSession {
-        while (!this@copyTo.endOfInput) {
-            tryAwait(1)
-            val buffer = request(1)!!
-            val size = this@copyTo.readAvailable(buffer)
-
-            if (size < 0) continue
-            written(size)
+    while (!endOfInput) {
+        channel.write { memory, startIndex, endIndex ->
+            readAvailable(memory, startIndex, endIndex).toInt()
         }
     }
 }

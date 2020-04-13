@@ -3,7 +3,6 @@ package io.ktor.utils.io
 import io.ktor.utils.io.internal.*
 import io.ktor.utils.io.bits.Memory
 import io.ktor.utils.io.core.*
-import io.ktor.utils.io.core.ByteOrder
 import java.nio.*
 
 /**
@@ -25,40 +24,40 @@ public actual interface ByteReadChannel {
      */
     public actual val isClosedForRead: Boolean
 
-    public actual val isClosedForWrite: Boolean
-
     /**
-     * Byte order that is used for multi-byte read operations
-     * (such as [readShort], [readInt], [readLong], [readFloat], and [readDouble]).
+     * Returns `true` if the channel is closed and no remaining bytes are available for write.
      */
-    @Deprecated(
-        "Setting byte order is no longer supported. Read/write in big endian and use reverseByteOrder() extensions.",
-        level = DeprecationLevel.ERROR
-    )
-    public actual var readByteOrder: ByteOrder
+    public actual val isClosedForWrite: Boolean
 
     /**
      * Number of bytes read from the channel.
      * It is not guaranteed to be atomic so could be updated in the middle of long running read operation.
      */
-    @Deprecated("Don't use byte count")
     public actual val totalBytesRead: Long
 
     /**
-     * Reads all available bytes to [dst] buffer and returns immediately or suspends if no bytes available
+     * Reads all available bytes to [destination] buffer and returns immediately or suspends if no bytes available
      * @return number of bytes were read or `-1` if the channel has been closed
      */
-    public actual suspend fun readAvailable(dst: ByteArray, offset: Int, length: Int): Int
-    public actual suspend fun readAvailable(dst: IoBuffer): Int
-    suspend fun readAvailable(dst: ByteBuffer): Int
+    public actual suspend fun readAvailable(destination: ByteArray, offset: Int, length: Int): Int
 
     /**
-     * Reads all [length] bytes to [dst] buffer or fails if channel has been closed.
+     * Reads all available bytes to [destination] buffer and returns immediately or suspends if no bytes available
+     * @return number of bytes were read or `-1` if the channel has been closed
+     */
+    public suspend fun readAvailable(destination: ByteBuffer): Int
+
+    /**
+     * Reads all [length] bytes to [destination] buffer or fails if channel has been closed.
      * Suspends if not enough bytes available.
      */
-    public actual suspend fun readFully(dst: ByteArray, offset: Int, length: Int)
-    public actual suspend fun readFully(dst: IoBuffer, n: Int)
-    suspend fun readFully(dst: ByteBuffer): Int
+    public actual suspend fun readFully(destination: ByteArray, offset: Int, length: Int)
+
+    /**
+     * Reads all [ByteBuffer.remaining] bytes to [destination] buffer or fails if channel has been closed.
+     * Suspends if not enough bytes available.
+     */
+    public suspend fun readFully(destination: ByteBuffer): Int
 
     /**
      * Reads the specified amount of bytes and makes a byte packet from them. Fails if channel has been closed
@@ -118,33 +117,9 @@ public actual interface ByteReadChannel {
      * For every available bytes range invokes [visitor] function until it return false or end of stream encountered
      */
     @Deprecated("Binary compatibility.", level = DeprecationLevel.HIDDEN)
-    suspend fun consumeEachBufferRange(visitor: ConsumeEachBufferVisitor) {
+    public suspend fun consumeEachBufferRange(visitor: ConsumeEachBufferVisitor) {
         consumeEachBufferRange(visitor)
     }
-
-    /**
-     * Starts non-suspendable read session. After channel preparation [consumer] lambda will be invoked immediately
-     * event if there are no bytes available for read yet.
-     */
-    @Suppress("DEPRECATION")
-    @Deprecated("Use read { } instead.")
-    public actual fun readSession(consumer: ReadSession.() -> Unit)
-
-    /**
-     * Starts a suspendable read session. After channel preparation [consumer] lambda will be invoked immediately
-     * even if there are no bytes available for read yet. [consumer] lambda could suspend as much as needed.
-     */
-    @Suppress("DEPRECATION")
-    @Deprecated("Use read { } instead.")
-    public actual suspend fun readSuspendableSession(consumer: suspend SuspendableReadSession.() -> Unit)
-
-    @Suppress("DEPRECATION")
-    @Deprecated("Use read { } instead.")
-    fun <R> lookAhead(visitor: LookAheadSession.() -> R): R
-
-    @Suppress("DEPRECATION")
-    @Deprecated("Use read { } instead.")
-    suspend fun <R> lookAheadSuspend(visitor: suspend LookAheadSuspendSession.() -> R): R
 
     /**
      * Reads a line of UTF-8 characters to the specified [out] buffer up to [limit] characters.
@@ -188,7 +163,7 @@ public actual interface ByteReadChannel {
      * @param min amount of bytes available for read, should be positive or zero
      * @param consumer to be invoked when at least [min] bytes available for read
      */
-    suspend fun read(min: Int = 1, consumer: (ByteBuffer) -> Unit)
+    public suspend fun read(min: Int = 1, consumer: (ByteBuffer) -> Unit)
 
     /**
      * Close channel with optional [cause] cancellation. Unlike [ByteWriteChannel.close] that could close channel
@@ -237,6 +212,9 @@ public actual interface ByteReadChannel {
     ): Long
 
     public actual companion object {
+        /**
+         * Empty [ByteReadChannel]
+         */
         public actual val Empty: ByteReadChannel by lazy { ByteChannel().apply { close() } }
     }
 }
@@ -308,37 +286,3 @@ private suspend fun ByteReadChannel.copyToImpl(dst: ByteWriteChannel, limit: Lon
         buffer.release(IoBuffer.Pool)
     }
 }
-
-/**
- * TODO
- * Reads all the bytes from receiver channel and builds a packet that is returned unless the specified [limit] exceeded.
- * It will simply stop reading and return packet of size [limit] in this case
- */
-/*suspend fun ByteReadChannel.readRemaining(limit: Int = Int.MAX_VALUE): ByteReadPacket {
-    val buffer = JavaNioAccess.BufferPool.borrow()
-    val packet = WritePacket()
-
-    try {
-        var copied = 0L
-
-        while (copied < limit) {
-            buffer.clear()
-            if (limit - copied < buffer.limit()) {
-                buffer.limit((limit - copied).toInt())
-            }
-            val size = readAvailable(buffer)
-            if (size == -1) break
-
-            buffer.flip()
-            packet.writeFully(buffer)
-            copied += size
-        }
-
-        return packet.build()
-    } catch (t: Throwable) {
-        packet.release()
-        throw t
-    } finally {
-        JavaNioAccess.BufferPool.recycle(buffer)
-    }
-}*/

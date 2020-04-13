@@ -1,36 +1,35 @@
 package kotlinx.coroutines.experimental.io
 
 import io.ktor.utils.io.*
-import io.ktor.utils.io.core.writeInt
 import kotlin.test.*
 
 class ByteBufferChannelLookAheadTest : ByteChannelTestBase() {
     @Test
     fun testDoNothing() = runTest {
-        ch.lookAheadSuspend {
+        channel.lookAheadSuspend {
         }
     }
 
     @Test
     fun testDoNothingWhileWriting() = runTest {
-        ch.writeSuspendSession {
-            ch.lookAheadSuspend {
+        channel.writeSuspendSession {
+            channel.lookAheadSuspend {
             }
         }
     }
 
     @Test
     fun testDoNothingWhileWriting2() = runTest {
-        ch.lookAheadSuspend {
-            ch.writeSuspendSession {
+        channel.lookAheadSuspend {
+            channel.writeSuspendSession {
             }
         }
     }
 
     @Test
     fun testReadDuringWriting() = runTest {
-        ch.writeSuspendSession {
-            ch.lookAheadSuspend {
+        channel.writeSuspendSession {
+            channel.lookAheadSuspend {
                 this@writeSuspendSession.request(1)!!.writeInt(777)
                 written(4)
                 flush()

@@ -1,5 +1,6 @@
 package io.ktor.utils.io
 
+import io.ktor.utils.io.bits.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import io.ktor.utils.io.core.*
@@ -7,8 +8,7 @@ import java.nio.ByteBuffer
 
 @Suppress("EXPERIMENTAL_FEATURE_WARNING")
 @ExperimentalIoApi
-class ByteChannelSequentialJVM(initial: IoBuffer, autoFlush: Boolean)
-    : ByteChannelSequentialBase(initial, autoFlush) {
+class ByteChannelSequentialJVM(initial: IoBuffer, autoFlush: Boolean) : ByteChannelSequentialBase(initial, autoFlush) {
 
     @Volatile
     private var attachedJob: Job? = null
@@ -25,12 +25,12 @@ class ByteChannelSequentialJVM(initial: IoBuffer, autoFlush: Boolean)
         }
     }
 
-    override suspend fun writeAvailable(src: ByteBuffer): Int {
-        val rc = tryWriteAvailable(src)
+    override suspend fun writeAvailable(source: ByteBuffer): Int {
+        val rc = tryWriteAvailable(source)
         return when {
             rc > 0 -> rc
-            !src.hasRemaining() -> 0
-            else -> writeAvailableSuspend(src)
+            !source.hasRemaining() -> 0
+            else -> writeAvailableSuspend(source)
         }
     }
 
@@ -39,11 +39,15 @@ class ByteChannelSequentialJVM(initial: IoBuffer, autoFlush: Boolean)
         return writeAvailable(src)
     }
 
-    override suspend fun writeFully(src: ByteBuffer) {
-        tryWriteAvailable(src)
-        if (!src.hasRemaining()) return
+    override suspend fun writeFully(source: ByteBuffer) {
+        tryWriteAvailable(source)
+        if (!source.hasRemaining()) return
 
-        writeFullySuspend(src)
+        writeFullySuspend(source)
+    }
+
+    override suspend fun writeFully(source: Memory, offset: Int, length: Int) {
+        TODO("Not yet implemented")
     }
 
     private suspend fun writeFullySuspend(src: ByteBuffer) {
@@ -75,11 +79,11 @@ class ByteChannelSequentialJVM(initial: IoBuffer, autoFlush: Boolean)
         }
     }
 
-    override suspend fun readAvailable(dst: ByteBuffer): Int {
-        val rc = tryReadAvailable(dst)
+    override suspend fun readAvailable(destination: ByteBuffer): Int {
+        val rc = tryReadAvailable(destination)
         if (rc != 0) return rc
-        if (!dst.hasRemaining()) return 0
-        return readAvailableSuspend(dst)
+        if (!destination.hasRemaining()) return 0
+        return readAvailableSuspend(destination)
     }
 
     private suspend fun readAvailableSuspend(dst: ByteBuffer): Int {
@@ -87,12 +91,12 @@ class ByteChannelSequentialJVM(initial: IoBuffer, autoFlush: Boolean)
         return readAvailable(dst)
     }
 
-    override suspend fun readFully(dst: ByteBuffer): Int {
-        val rc = tryReadAvailable(dst)
+    override suspend fun readFully(destination: ByteBuffer): Int {
+        val rc = tryReadAvailable(destination)
         if (rc == -1) throw EOFException("Channel closed")
-        if (!dst.hasRemaining()) return rc
+        if (!destination.hasRemaining()) return rc
 
-        return readFullySuspend(dst, rc)
+        return readFullySuspend(destination, rc)
     }
 
     private suspend fun readFullySuspend(dst: ByteBuffer, rc0: Int): Int {
@@ -140,14 +144,6 @@ class ByteChannelSequentialJVM(initial: IoBuffer, autoFlush: Boolean)
         if (!invokedWithLast) {
             visitor(ByteBuffer.allocate(0), true)
         }
-    }
-
-    override fun <R> lookAhead(visitor: LookAheadSession.() -> R): R {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override suspend fun <R> lookAheadSuspend(visitor: suspend LookAheadSuspendSession.() -> R): R {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     override suspend fun read(min: Int, consumer: (ByteBuffer) -> Unit) {

@@ -121,7 +121,6 @@ open class ChunkBuffer internal constructor(memory: Memory, origin: ChunkBuffer?
 
         super.reset()
         @Suppress("DEPRECATION")
-        attachment = null
         nextRef.value = null
     }
 

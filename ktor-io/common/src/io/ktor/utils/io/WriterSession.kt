@@ -17,7 +17,7 @@ import io.ktor.utils.io.core.internal.ChunkBuffer
 @ExperimentalIoApi
 public suspend inline fun ByteWriteChannel.write(
     desiredSpace: Int = 1,
-    block: (freeSpace: Memory, startOffset: Long, endExclusive: Long) -> Int
+    block: (memory: Memory, startIndex: Long, endIndex: Long) -> Int
 ): Int {
     TODO()
 }

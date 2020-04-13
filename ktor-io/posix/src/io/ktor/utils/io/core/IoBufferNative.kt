@@ -8,6 +8,7 @@ import io.ktor.utils.io.core.internal.*
 import io.ktor.utils.io.pool.*
 import platform.posix.*
 import kotlin.contracts.*
+import kotlin.math.*
 import kotlin.native.concurrent.*
 
 @PublishedApi
@@ -51,6 +52,23 @@ public actual class IoBuffer actual constructor(
 
     final override fun tryPeek(): Int {
         return tryPeekByte()
+    }
+
+    override fun discard(count: Long): Long {
+        var remaining = count
+        while (remaining > 0) {
+            val readCount = read { _, start, endExclusive ->
+                min(remaining, (endExclusive - start).toLong()).toInt()
+            }
+
+            if (readCount <= 0) {
+                break
+            }
+
+            remaining -= readCount
+        }
+
+        return count - remaining
     }
 
     @Deprecated("Binary compatibility.", level = DeprecationLevel.HIDDEN)
@@ -211,11 +229,11 @@ public actual class IoBuffer actual constructor(
      * @return number of bytes read
      */
     fun readDirect(block: (CPointer<ByteVar>) -> Int): Int {
-        val rc = block((content + readPosition)!!)
-        check(rc >= 0) { "block function should return non-negative results: $rc" }
-        check(rc <= readRemaining) { "result value is too large: $rc > $readRemaining" }
-        discard(rc)
-        return rc
+        val readCount = block((content + readPosition)!!)
+        check(readCount >= 0) { "block function should return non-negative results: $readCount" }
+        check(readCount <= readRemaining) { "result value is too large: $readCount > $readRemaining" }
+        discard(readCount.toLong())
+        return readCount
     }
 
     @Deprecated("Binary compatibility.", level = DeprecationLevel.HIDDEN)

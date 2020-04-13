@@ -13,13 +13,13 @@ class ByteChannelSessionsTest : ByteChannelTestBase() {
     fun testSessionReadingSingleChunk(): Unit = runTest {
         coroutines.schedule {
             expect(2)
-            ch.writeStringUtf8("ABC")
-            ch.close()
+            channel.writeStringUtf8("ABC")
+            channel.close()
         }
 
         expect(1)
 
-        val first = ch.read { _, start, endExclusive ->
+        val first = channel.read { _, start, endExclusive ->
             assertEquals(3, endExclusive - start, "yo")
             0
         }
@@ -28,22 +28,22 @@ class ByteChannelSessionsTest : ByteChannelTestBase() {
 
         expect(3)
 
-        assertEquals(1, ch.read { buffer, start, endExclusive ->
+        assertEquals(1, channel.read { buffer, start, endExclusive ->
             assertEquals(3, endExclusive - start)
             assertEquals('A'.toByte(), buffer[start])
             1
         })
 
-        assertEquals(2, ch.read { buffer, start, endExclusive ->
+        assertEquals(2, channel.read { buffer, start, endExclusive ->
             assertEquals(2, endExclusive - start)
             assertEquals('B'.toByte(), buffer[start])
             assertEquals('C'.toByte(), buffer[start + 1])
             2
         })
 
-        assertTrue(ch.isClosedForRead, "Should be closed after all bytes read.")
+        assertTrue(channel.isClosedForRead, "Should be closed after all bytes read.")
 
-        assertEquals(0, ch.read { _, start, endExclusive ->
+        assertEquals(0, channel.read { _, start, endExclusive ->
             assertEquals(0, endExclusive - start)
             0
         })
@@ -59,8 +59,8 @@ class ByteChannelSessionsTest : ByteChannelTestBase() {
             }
         }
         coroutines.schedule {
-            ch.writeStringUtf8(text)
-            ch.close()
+            channel.writeStringUtf8(text)
+            channel.close()
         }
 
         expect(1)
@@ -71,7 +71,7 @@ class ByteChannelSessionsTest : ByteChannelTestBase() {
         while (!completed) {
             var size: Int = -1
 
-            val result = ch.read { source, start, endExclusive ->
+            val result = channel.read { source, start, endExclusive ->
                 check(start >= 0)
                 check(endExclusive >= start)
                 check(source.size32 >= (endExclusive - start))
@@ -110,7 +110,7 @@ class ByteChannelSessionsTest : ByteChannelTestBase() {
             assertEquals(size, result)
         }
 
-        assertTrue(ch.isClosedForRead, "Should be closed after all bytes read.")
+        assertTrue(channel.isClosedForRead, "Should be closed after all bytes read.")
     }
 
     @Test
@@ -121,8 +121,8 @@ class ByteChannelSessionsTest : ByteChannelTestBase() {
             }
         }
         coroutines.schedule {
-            ch.writeStringUtf8(text)
-            ch.close()
+            channel.writeStringUtf8(text)
+            channel.close()
         }
 
         expect(1)
@@ -130,7 +130,7 @@ class ByteChannelSessionsTest : ByteChannelTestBase() {
         var bytesRead = 0
 
         @Suppress("DEPRECATION")
-        ch.readSuspendableSession {
+        channel.readSuspendableSession {
             while (true) {
                 val buffer = request(1)
                 if (buffer != null) {
@@ -150,6 +150,6 @@ class ByteChannelSessionsTest : ByteChannelTestBase() {
         }
 
         yield()
-        assertTrue(ch.isClosedForRead, "Should be closed after all bytes read.")
+        assertTrue(channel.isClosedForRead, "Should be closed after all bytes read.")
     }
 }

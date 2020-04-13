@@ -4,6 +4,7 @@
 
 package io.ktor.utils.io
 
+import io.ktor.utils.io.bits.*
 import io.ktor.utils.io.core.*
 import io.ktor.utils.io.core.internal.*
 import kotlinx.cinterop.*
@@ -39,6 +40,10 @@ internal class ByteChannelNative(
     }
 
     override suspend fun writeFully(src: CPointer<ByteVar>, offset: Long, length: Long) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun writeFully(source: Memory, offset: Int, length: Int) {
         TODO("Not yet implemented")
     }
 
@@ -82,85 +87,78 @@ internal class ByteChannelNative(
         TODO("Not yet implemented")
     }
 
-    override val availableForRead: kotlin.Int
+    override val availableForRead: Int
         get() = TODO("Not yet implemented")
-    override val isClosedForRead: kotlin.Boolean
+    override val isClosedForRead: Boolean
         get() = TODO("Not yet implemented")
-    override val isClosedForWrite: kotlin.Boolean
+    override val isClosedForWrite: Boolean
         get() = TODO("Not yet implemented")
-    override var readByteOrder: io.ktor.utils.io.core.ByteOrder
-        get() = TODO("Not yet implemented")
-        set(value) {}
-    override val totalBytesRead: kotlin.Long
+    override val totalBytesRead: Long
         get() = TODO("Not yet implemented")
 
-    override suspend fun readAvailable(dst: kotlin.ByteArray, offset: kotlin.Int, length: kotlin.Int): kotlin.Int {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun readAvailable(dst: Buffer): kotlin.Int {
+    override suspend fun readAvailable(
+        destination: ByteArray,
+        offset: Int,
+        length: Int
+    ): Int {
         TODO("Not yet implemented")
     }
 
     override suspend fun readAvailable(
-        dst: kotlinx.cinterop.CPointer<kotlinx.cinterop.ByteVar>,
-        offset: kotlin.Int,
-        length: kotlin.Int
-    ): kotlin.Int {
+        destination: CPointer<ByteVar>,
+        offset: Int,
+        length: Int
+    ): Int {
         TODO("Not yet implemented")
     }
 
     override suspend fun readAvailable(
-        dst: kotlinx.cinterop.CPointer<kotlinx.cinterop.ByteVar>,
-        offset: kotlin.Long,
-        length: kotlin.Long
-    ): kotlin.Int {
+        destination: CPointer<ByteVar>,
+        offset: Long,
+        length: Long
+    ): Int {
         TODO("Not yet implemented")
     }
 
-    override suspend fun readFully(dst: kotlin.ByteArray, offset: kotlin.Int, length: kotlin.Int) {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun readFully(dst: Buffer, n: kotlin.Int) {
+    override suspend fun readFully(destination: ByteArray, offset: Int, length: Int) {
         TODO("Not yet implemented")
     }
 
     override suspend fun readFully(
-        dst: kotlinx.cinterop.CPointer<kotlinx.cinterop.ByteVar>,
-        offset: kotlin.Int,
-        length: kotlin.Int
+        destination: CPointer<ByteVar>,
+        offset: Int,
+        length: Int
     ) {
         TODO("Not yet implemented")
     }
 
     override suspend fun readFully(
-        dst: kotlinx.cinterop.CPointer<kotlinx.cinterop.ByteVar>,
-        offset: kotlin.Long,
-        length: kotlin.Long
+        destination: CPointer<ByteVar>,
+        offset: Long,
+        length: Long
     ) {
         TODO("Not yet implemented")
     }
 
     override suspend fun readPacket(
-        size: kotlin.Int,
-        headerSizeHint: kotlin.Int
+        size: Int,
+        headerSizeHint: Int
     ): io.ktor.utils.io.core.ByteReadPacket {
         TODO("Not yet implemented")
     }
 
     override suspend fun readRemaining(
-        limit: kotlin.Long,
-        headerSizeHint: kotlin.Int
+        limit: Long,
+        headerSizeHint: Int
     ): io.ktor.utils.io.core.ByteReadPacket {
         TODO("Not yet implemented")
     }
 
-    override suspend fun readLong(): kotlin.Long {
+    override suspend fun readLong(): Long {
         TODO("Not yet implemented")
     }
 
-    override suspend fun readInt(): kotlin.Int {
+    override suspend fun readInt(): Int {
         TODO("Not yet implemented")
     }
 
@@ -172,7 +170,7 @@ internal class ByteChannelNative(
         TODO("Not yet implemented")
     }
 
-    override suspend fun readBoolean(): kotlin.Boolean {
+    override suspend fun readBoolean(): Boolean {
         TODO("Not yet implemented")
     }
 
@@ -184,32 +182,32 @@ internal class ByteChannelNative(
         TODO("Not yet implemented")
     }
 
-    override suspend fun <A : kotlin.text.Appendable> readUTF8LineTo(out: A, limit: kotlin.Int): kotlin.Boolean {
+    override suspend fun <A : kotlin.text.Appendable> readUTF8LineTo(out: A, limit: Int): Boolean {
         TODO("Not yet implemented")
     }
 
-    override suspend fun readUTF8Line(limit: kotlin.Int): kotlin.String? {
+    override suspend fun readUTF8Line(limit: Int): kotlin.String? {
         TODO("Not yet implemented")
     }
 
-    override fun cancel(cause: kotlin.Throwable?): kotlin.Boolean {
+    override fun cancel(cause: kotlin.Throwable?): Boolean {
         TODO("Not yet implemented")
     }
 
-    override suspend fun discard(max: kotlin.Long): kotlin.Long {
+    override suspend fun discard(max: Long): Long {
         TODO("Not yet implemented")
     }
 
     override suspend fun peekTo(
         destination: io.ktor.utils.io.bits.Memory,
-        destinationOffset: kotlin.Long,
-        offset: kotlin.Long,
-        min: kotlin.Long,
-        max: kotlin.Long
-    ): kotlin.Long {
+        destinationOffset: Long,
+        offset: Long,
+        min: Long,
+        max: Long
+    ): Long {
         TODO("Not yet implemented")
     }
 
-    override val availableForWrite: kotlin.Int
+    override val availableForWrite: Int
         get() = TODO("Not yet implemented")
 }

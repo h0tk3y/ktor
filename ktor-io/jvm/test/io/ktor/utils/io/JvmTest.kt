@@ -19,7 +19,7 @@ open class JvmByteChannelSmokeTest : ByteChannelSmokeTest() {
             val bytes = byteArrayOf(1, 2, 3, 4, 5)
             val dst = ByteArray(5)
 
-            val ch: ByteChannel = ch
+            val ch: ByteChannel = channel
 
             ch.writeFully(ByteBuffer.wrap(bytes))
             ch.flush()
@@ -51,19 +51,19 @@ open class JvmByteChannelSmokeTest : ByteChannelSmokeTest() {
         runTest {
             val bytes = byteArrayOf(1, 2, 3, 4, 5)
 
-            assertEquals(5, ch.writeAvailable(ByteBuffer.wrap(bytes)))
-            ch.flush()
-            assertEquals(5, ch.readAvailable(ByteBuffer.allocate(100)))
+            assertEquals(5, channel.writeAvailable(ByteBuffer.wrap(bytes)))
+            channel.flush()
+            assertEquals(5, channel.readAvailable(ByteBuffer.allocate(100)))
 
             repeat(Size / bytes.size) {
-                assertNotEquals(0, ch.writeAvailable(ByteBuffer.wrap(bytes)))
-                ch.flush()
+                assertNotEquals(0, channel.writeAvailable(ByteBuffer.wrap(bytes)))
+                channel.flush()
             }
 
-            ch.readAvailable(ByteArray(ch.availableForRead - 1))
-            assertEquals(1, ch.readAvailable(ByteBuffer.allocate(100)))
+            channel.readAvailable(ByteArray(channel.availableForRead - 1))
+            assertEquals(1, channel.readAvailable(ByteBuffer.allocate(100)))
 
-            ch.close()
+            channel.close()
         }
     }
 

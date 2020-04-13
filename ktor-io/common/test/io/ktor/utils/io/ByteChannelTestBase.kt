@@ -4,13 +4,13 @@ import kotlin.test.*
 
 abstract class ByteChannelTestBase(autoFlush: Boolean = false) {
     protected val coroutines = DummyCoroutines()
-    protected val ch: ByteChannel by lazy { ByteChannel(autoFlush) }
+    protected val channel: ByteChannel by lazy { ByteChannel(autoFlush) }
     protected val Size = 4096 - 8
     private var current = 0
 
     @AfterTest
     fun finish() {
-        ch.close(CancellationException("Test finished"))
+        channel.close(CancellationException("Test finished"))
     }
 
     protected open fun ByteChannel(autoFlush: Boolean): ByteChannel {

@@ -53,7 +53,7 @@ expect interface Input : Closeable {
      * @param max bytes to be copied even if there are more bytes buffered, could be [Int.MAX_VALUE].
      * @return number of bytes copied to the [destination] possibly `0`
      */
-    fun peekTo(
+    public fun peekTo(
         destination: Memory,
         destinationOffset: Long,
         offset: Long = 0,
@@ -62,9 +62,9 @@ expect interface Input : Closeable {
     ): Long
 
     /**
-     * Discard at most [n] bytes
+     * Discard at most [count] bytes
      */
-    fun discard(n: Long): Long
+    public fun discard(count: Long): Long
 
     /**
      * Close input including the underlying source. All pending bytes will be discarded.

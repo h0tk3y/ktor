@@ -19,7 +19,7 @@ import io.ktor.utils.io.core.internal.*
 @ExperimentalIoApi
 public suspend inline fun ByteReadChannel.read(
     desiredSize: Int = 1,
-    block: (source: Memory, start: Long, endExclusive: Long) -> Int
+    block: (source: Memory, startIndex: Int, endIndex: Int) -> Int
 ): Int {
     TODO()
 }

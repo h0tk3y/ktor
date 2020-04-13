@@ -1,5 +1,6 @@
 package io.ktor.utils.io
 
+import io.ktor.utils.io.bits.*
 import io.ktor.utils.io.core.*
 import io.ktor.utils.io.core.ByteOrder
 import java.nio.*
@@ -30,20 +31,9 @@ public actual interface ByteWriteChannel {
     public actual val autoFlush: Boolean
 
     /**
-     * Byte order that is used for multi-byte write operations
-     * (such as [writeShort], [writeInt], [writeLong], [writeFloat], and [writeDouble]).
-     */
-    @Deprecated(
-        "Setting byte order is no longer supported. Read/write in big endian and use reverseByteOrder() extensions.",
-        level = DeprecationLevel.ERROR
-    )
-    actual var writeByteOrder: ByteOrder
-
-    /**
      * Number of bytes written to the channel.
      * It is not guaranteed to be atomic so could be updated in the middle of write operation.
      */
-    @Deprecated("Counter is no longer supported")
     public actual val totalBytesWritten: Long
 
     /**
@@ -55,16 +45,23 @@ public actual interface ByteWriteChannel {
      * Writes as much as possible and only suspends if buffer is full
      */
     public actual suspend fun writeAvailable(source: ByteArray, offset: Int, length: Int): Int
-    actual suspend fun writeAvailable(src: IoBuffer): Int
-    suspend fun writeAvailable(src: ByteBuffer): Int
+
+    /**
+     * Writes as much as possible and only suspends if buffer is full
+     */
+    public suspend fun writeAvailable(source: ByteBuffer): Int
 
     /**
      * Writes all [source] bytes and suspends until all bytes written. Causes flush if buffer filled up or when [autoFlush]
      * Crashes if channel get closed while writing.
      */
     public actual suspend fun writeFully(source: ByteArray, offset: Int, length: Int)
-    actual suspend fun writeFully(src: IoBuffer)
-    suspend fun writeFully(src: ByteBuffer)
+
+    /**
+     * Writes all [source] bytes and suspends until all bytes written. Causes flush if buffer filled up or when [autoFlush]
+     * Crashes if channel get closed while writing.
+     */
+    public suspend fun writeFully(source: ByteBuffer)
 
     /**
      * Invokes [block] when it will be possible to write at least [min] bytes
@@ -79,7 +76,7 @@ public actual interface ByteWriteChannel {
      * @param min amount of bytes available for write, should be positive
      * @param block to be invoked when at least [min] bytes free capacity available
      */
-    suspend fun write(min: Int = 1, block: (ByteBuffer) -> Unit)
+    public suspend fun write(min: Int = 1, block: (ByteBuffer) -> Unit)
 
     /**
      * Invokes [block] for every free buffer until it return `false`. It will also suspend every time when no free
@@ -87,11 +84,7 @@ public actual interface ByteWriteChannel {
      *
      * @param block to be invoked when there is free space available for write
      */
-    suspend fun writeWhile(block: (ByteBuffer) -> Boolean)
-
-    @Suppress("DEPRECATION")
-    @Deprecated("Use write { } instead.")
-    actual suspend fun writeSuspendSession(visitor: suspend WriterSuspendSession.() -> Unit)
+    public suspend fun writeWhile(block: (ByteBuffer) -> Boolean)
 
     /**
      * Writes a [packet] fully or fails if channel get closed before the whole packet has been written
@@ -160,5 +153,11 @@ public actual interface ByteWriteChannel {
      * It does nothing when invoked on a closed channel.
      */
     public actual fun flush()
+
+    /**
+     * Writes all [source] bytes from [offset] using [length] and suspends until all bytes written.
+     * Causes flush if buffer filled up or when [autoFlush]. Crashes if channel get closed while writing.
+     */
+    public actual suspend fun writeFully(source: Memory, offset: Int, length: Int)
 }
 

@@ -214,9 +214,6 @@ public suspend inline fun ByteReadChannel.discardExact(n: Long) {
     if (discard(n) != n) throw EOFException("Unable to discard $n bytes")
 }
 
-public suspend fun ByteReadChannel.readAvailable(dst: ByteArray) = readAvailable(dst, 0, dst.size)
-public suspend fun ByteReadChannel.readFully(dst: ByteArray) = readFully(dst, 0, dst.size)
-
 public expect suspend fun ByteReadChannel.joinTo(dst: ByteWriteChannel, closeOnEnd: Boolean)
 
 /**

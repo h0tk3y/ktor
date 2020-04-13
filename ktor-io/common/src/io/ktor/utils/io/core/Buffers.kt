@@ -6,93 +6,18 @@ import io.ktor.utils.io.pool.*
 import kotlin.contracts.*
 
 /**
- * A read-write facade to actual buffer of fixed size. Multiple views could share the same actual buffer.
- * Concurrent unsafe. The only concurrent-safe operation is [release].
- * In most cases [ByteReadPacket] and [BytePacketBuilder] should be used instead.
- */
-@Suppress("DIFFERENT_NAMES_FOR_THE_SAME_PARAMETER_IN_SUPERTYPES", "DEPRECATION")
-@Deprecated("Use Memory, Input or Output instead.")
-public expect class IoBuffer : Input, Output, ChunkBuffer {
-
-    @Suppress("ConvertSecondaryConstructorToPrimary")
-    constructor(memory: Memory, origin: ChunkBuffer?)
-
-    @Deprecated(
-        "Not supported anymore. All operations are big endian by default. " +
-            "Read/write with readXXXLittleEndian/writeXXXLittleEndian or " +
-            "do readXXX/writeXXX with X.reverseByteOrder() instead.",
-        level = DeprecationLevel.ERROR
-    )
-    final override var byteOrder: ByteOrder
-
-    override fun close()
-
-    final override fun flush()
-
-    fun release(pool: ObjectPool<IoBuffer>)
-
-    @Suppress("DEPRECATION")
-    companion object {
-        /**
-         * Number of bytes usually reserved in the end of chunk
-         * when several instances of [ChunkBuffer] are connected into a chain (usually inside of [ByteReadPacket]
-         * or [BytePacketBuilder])
-         */
-        @DangerousInternalIoApi
-        val ReservedSize: Int
-
-        /**
-         * The empty buffer singleton: it has zero capacity for read and write.
-         */
-        val Empty: IoBuffer
-
-        /**
-         * The default buffer pool
-         */
-        val Pool: ObjectPool<IoBuffer>
-
-        /**
-         * Pool that always instantiates new buffers instead of reusing it
-         */
-        val NoPool: ObjectPool<IoBuffer>
-
-        /**
-         * A pool that always returns [IoBuffer.Empty]
-         */
-        val EmptyPool: ObjectPool<IoBuffer>
-    }
-}
-
-/**
  * Read the specified number of bytes specified (optional, read all remaining by default)
  */
-fun Buffer.readBytes(count: Int = readRemaining): ByteArray {
+public fun Buffer.readBytes(count: Int = readRemaining): ByteArray {
     if (count == 0) {
         return EmptyByteArray
     }
 
-    val result = ByteArray(count)
-    readFully(result)
-    return result
-}
-
-@Suppress("DEPRECATION")
-internal fun IoBuffer.releaseImpl(pool: ObjectPool<IoBuffer>) {
-    if (release()) {
-        val origin = origin
-        if (origin is IoBuffer) {
-            unlink()
-            origin.release(pool)
-        } else {
-            pool.recycle(this)
-        }
+    return ByteArray(count).also {
+        readFully(it)
     }
 }
 
-@Suppress("DEPRECATION", "DEPRECATION_ERROR")
-internal object EmptyBufferPoolImpl : NoPoolImpl<IoBuffer>() {
-    override fun borrow() = IoBuffer.Empty
-}
 
 internal tailrec fun ChunkBuffer?.releaseAll(pool: ObjectPool<ChunkBuffer>) {
     if (this == null) return
@@ -139,14 +64,7 @@ internal tailrec fun ChunkBuffer.findTail(): ChunkBuffer {
 /**
  * Summarize remainings of all elements of the chain
  */
-@DangerousInternalIoApi
-fun ChunkBuffer.remainingAll(): Long = remainingAll(0L)
-
-@Suppress("DEPRECATION", "UNUSED")
-@Deprecated("Binary compatibility.", level = DeprecationLevel.HIDDEN)
-fun remainingAll(buffer: IoBuffer): Long = buffer.remainingAll()
-
-private tailrec fun ChunkBuffer.remainingAll(n: Long): Long {
+public tailrec fun ChunkBuffer.remainingAll(n: Long = 0L): Long {
     val rem = readRemaining.toLong() + n
     val next = this.next ?: return rem
 

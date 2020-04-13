@@ -46,7 +46,7 @@ fun Input.peekTo(destination: IoBuffer, offset: Int = 0, min: Int = 1, max: Int 
  */
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER", "DEPRECATION")
 @Deprecated("Use peekTo(Memory) instead.")
-fun Input.peekTo(destination: Buffer, offset: Int = 0, min: Int = 1, max: Int = Int.MAX_VALUE): Int {
+public fun Input.peekTo(destination: Buffer, offset: Int = 0, min: Int = 1, max: Int = Int.MAX_VALUE): Int {
     checkPeekTo(destination, offset, min, max)
 
     val copied = peekTo(

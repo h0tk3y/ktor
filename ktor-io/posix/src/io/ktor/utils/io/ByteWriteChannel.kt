@@ -2,6 +2,7 @@
 
 package io.ktor.utils.io
 
+import io.ktor.utils.io.bits.*
 import io.ktor.utils.io.core.*
 import kotlinx.cinterop.*
 
@@ -142,4 +143,10 @@ public actual interface ByteWriteChannel {
      * It does nothing when invoked on a closed channel.
      */
     public actual fun flush()
+
+    /**
+     * Writes all [source] bytes from [offset] using [length] and suspends until all bytes written.
+     * Causes flush if buffer filled up or when [autoFlush]. Crashes if channel get closed while writing.
+     */
+    actual suspend fun writeFully(source: Memory, offset: Int, length: Int)
 }

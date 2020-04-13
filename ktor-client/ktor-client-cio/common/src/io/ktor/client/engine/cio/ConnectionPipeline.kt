@@ -155,7 +155,7 @@ private fun CoroutineScope.skipCancels(
         while (true) {
             val read = input.read { source, start, endExclusive ->
                 if (cancel) {
-                    return@read endExclusive.toInt()
+                    return@read endExclusive
                 }
                 val count = try {
                     output.writeFully(source, start, endExclusive)
@@ -165,23 +165,11 @@ private fun CoroutineScope.skipCancels(
                     endExclusive
                 }
 
-                count.toInt()
+                count
             }
-        }
 
-        input.readSuspendableSession {
-            while (await()) {
-                val buffer = request() ?: break
-                if (cancel) {
-                    buffer.discard()
-                }
-
-                try {
-                    output.writeFully(buffer)
-                } catch (_: Throwable) {
-                    buffer.discard()
-                    cancel = true
-                }
+            if (read <= 0) {
+                break
             }
         }
     } finally {

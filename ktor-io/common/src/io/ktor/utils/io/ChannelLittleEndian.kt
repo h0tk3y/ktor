@@ -3,17 +3,14 @@ package io.ktor.utils.io
 import io.ktor.utils.io.bits.*
 import io.ktor.utils.io.core.*
 
-public suspend inline fun ByteReadChannel.readShort(byteOrder: ByteOrder): Short {
-    return readShort().reverseIfNeeded(byteOrder) { reverseByteOrder() }
-}
+public suspend inline fun ByteReadChannel.readShort(byteOrder: ByteOrder): Short =
+    readShort().reverseIfNeeded(byteOrder) { reverseByteOrder() }
 
-public suspend inline fun ByteReadChannel.readInt(byteOrder: ByteOrder): Int {
-    return readInt().reverseIfNeeded(byteOrder) { reverseByteOrder() }
-}
+public suspend inline fun ByteReadChannel.readInt(byteOrder: ByteOrder): Int =
+    readInt().reverseIfNeeded(byteOrder) { reverseByteOrder() }
 
-public suspend inline fun ByteReadChannel.readLong(byteOrder: ByteOrder): Long {
-    return readLong().reverseIfNeeded(byteOrder) { reverseByteOrder() }
-}
+public suspend inline fun ByteReadChannel.readLong(byteOrder: ByteOrder): Long =
+    readLong().reverseIfNeeded(byteOrder) { reverseByteOrder() }
 
 public suspend inline fun ByteReadChannel.readFloat(byteOrder: ByteOrder): Float {
     return readFloat().reverseIfNeeded(byteOrder) { reverseByteOrder() }
@@ -32,15 +29,15 @@ public suspend inline fun ByteReadChannel.readIntLittleEndian(): Int {
 }
 
 public suspend inline fun ByteReadChannel.readLongLittleEndian(): Long {
-    return toLittleEndian(readLong()) { reverseByteOrder() }
+    return readLong(ByteOrder.LITTLE_ENDIAN)
 }
 
 public suspend inline fun ByteReadChannel.readFloatLittleEndian(): Float {
-    return toLittleEndian(readFloat()) { reverseByteOrder() }
+    return readFloat(ByteOrder.LITTLE_ENDIAN)
 }
 
 public suspend inline fun ByteReadChannel.readDoubleLittleEndian(): Double {
-    return toLittleEndian(readDouble()) { reverseByteOrder() }
+    return readDouble(ByteOrder.LITTLE_ENDIAN)
 }
 
 public suspend fun ByteWriteChannel.writeShort(value: Short, byteOrder: ByteOrder) {
@@ -64,32 +61,23 @@ public suspend fun ByteWriteChannel.writeDouble(value: Double, byteOrder: ByteOr
 }
 
 public suspend fun ByteWriteChannel.writeShortLittleEndian(value: Short) {
-    writeShort(toLittleEndian(value) { reverseByteOrder() })
+    writeShort(value, ByteOrder.LITTLE_ENDIAN)
 }
 
 public suspend fun ByteWriteChannel.writeIntLittleEndian(value: Int) {
-    writeInt(toLittleEndian(value) { reverseByteOrder() })
+    writeInt(value, ByteOrder.LITTLE_ENDIAN)
 }
 
 public suspend fun ByteWriteChannel.writeLongLittleEndian(value: Long) {
-    writeLong(toLittleEndian(value) { reverseByteOrder() })
+    writeLong(value, ByteOrder.LITTLE_ENDIAN)
 }
 
 public suspend fun ByteWriteChannel.writeFloatLittleEndian(value: Float) {
-    writeFloat(toLittleEndian(value) { reverseByteOrder() })
+    writeFloat(value, ByteOrder.LITTLE_ENDIAN)
 }
 
 public suspend fun ByteWriteChannel.writeDoubleLittleEndian(value: Double) {
-    writeDouble(toLittleEndian(value) { reverseByteOrder() })
-}
-
-
-@Suppress("DEPRECATION_ERROR")
-private inline fun <T> ByteWriteChannel.toLittleEndian(value: T, reverseBlock: T.() -> T): T {
-    return when (writeByteOrder) {
-        ByteOrder.LITTLE_ENDIAN -> value
-        else -> value.reverseBlock()
-    }
+    writeDouble(value, ByteOrder.LITTLE_ENDIAN)
 }
 
 @PublishedApi

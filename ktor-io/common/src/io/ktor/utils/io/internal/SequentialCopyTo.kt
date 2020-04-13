@@ -1,7 +1,6 @@
 package io.ktor.utils.io.internal
 
 import io.ktor.utils.io.ByteChannelSequentialBase
-import io.ktor.utils.io.close
 import io.ktor.utils.io.core.internal.ChunkBuffer
 
 internal suspend fun ByteChannelSequentialBase.joinToImpl(dst: ByteChannelSequentialBase, closeOnEnd: Boolean) {

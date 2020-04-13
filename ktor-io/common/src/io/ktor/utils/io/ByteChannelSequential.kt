@@ -27,20 +27,19 @@ suspend fun ByteChannelSequentialBase.copyTo(
 @Suppress("OverridingDeprecatedMember")
 @DangerousInternalIoApi
 abstract class ByteChannelSequentialBase(
-    initial: IoBuffer,
     override val autoFlush: Boolean,
     pool: ObjectPool<ChunkBuffer> = ChunkBuffer.Pool
 ) : ByteChannel, ByteReadChannel, ByteWriteChannel {
 
     @Suppress("unused", "DEPRECATION")
     @Deprecated("Binary compatibility.", level = DeprecationLevel.HIDDEN)
-    public constructor(initial: IoBuffer, autoFlush: Boolean) : this(initial, autoFlush, ChunkBuffer.Pool)
+    public constructor(autoFlush: Boolean) : this(autoFlush, ChunkBuffer.Pool)
 
     protected var closed by shared(false)
 
     protected val writable = BytePacketBuilder(0, pool)
 
-    protected val readable = ByteReadPacket(initial, pool)
+    protected val readable = ByteReadPacket.Empty
 
     internal val notFull = Condition { totalPending() <= 4088L }
 
@@ -576,15 +575,9 @@ abstract class ByteChannelSequentialBase(
 
         while (true) {
             val copied = read { buffer, start, end ->
-                val length: Int = min(max - bytesCopied, end - start).toInt()
+                val length: Int = min(max - bytesCopied, end.toLong() - start.toLong()).toInt()
 
-                buffer.copyTo(
-                    destination,
-                    start.toInt(),
-                    length,
-                    currentOffset.toInt()
-                )
-
+                buffer.copyTo(destination, start, length, currentOffset.toInt())
                 currentOffset += length
 
                 length

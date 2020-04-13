@@ -18,13 +18,13 @@ class ByteChannelNativeTests : ByteChannelTestBase(true) {
 
         array.usePinned { pinned ->
             val ptr = pinned.addressOf(0)
-            ch.writeFully(ptr, 0, 4)
+            channel.writeFully(ptr, 0, 4)
         }
 
         val result = ByteArray(array.size)
         result.usePinned { pinned ->
             val ptr = pinned.addressOf(0)
-            ch.readFully(ptr, 0, 4)
+            channel.readFully(ptr, 0, 4)
         }
 
         assertTrue { array.contentEquals(result) }
@@ -40,13 +40,13 @@ class ByteChannelNativeTests : ByteChannelTestBase(true) {
 
             array.usePinned { pinned ->
                 val ptr = pinned.addressOf(0)
-                ch.writeFully(ptr, shift, 4 - shift)
+                channel.writeFully(ptr, shift, 4 - shift)
             }
 
             val result = ByteArray(array.size)
             result.usePinned { pinned ->
                 val ptr = pinned.addressOf(0)
-                ch.readFully(ptr, shift, 4 - shift)
+                channel.readFully(ptr, shift, 4 - shift)
             }
 
             for (i in shift..3) {
@@ -64,13 +64,13 @@ class ByteChannelNativeTests : ByteChannelTestBase(true) {
 
         array.usePinned { pinned ->
             val ptr = pinned.addressOf(0)
-            ch.writeFully(ptr, 0, 4)
+            channel.writeFully(ptr, 0, 4)
         }
 
         val result = ByteArray(array.size + 10)
         val size = result.usePinned { pinned ->
             val ptr = pinned.addressOf(0)
-            ch.readAvailable(ptr, 0, result.size)
+            channel.readAvailable(ptr, 0, result.size)
         }
 
         assertTrue { array.contentEquals(result.copyOf(size)) }

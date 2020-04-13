@@ -43,22 +43,22 @@ public actual interface ByteReadChannel {
     public actual val totalBytesRead: Long
 
     /**
-     * Reads all available bytes to [dst] buffer and returns immediately or suspends if no bytes available
+     * Reads all available bytes to [destination] buffer and returns immediately or suspends if no bytes available
      * @return number of bytes were read or `-1` if the channel has been closed
      */
-    public actual suspend fun readAvailable(dst: ByteArray, offset: Int, length: Int): Int
+    public actual suspend fun readAvailable(destination: ByteArray, offset: Int, length: Int): Int
 
-    public actual suspend fun readAvailable(dst: IoBuffer): Int
+    public actual suspend fun readAvailable(destination: IoBuffer): Int
 
     suspend fun readAvailable(dst: ArrayBuffer, offset: Int, length: Int): Int
 
     /**
-     * Reads all [length] bytes to [dst] buffer or fails if channel has been closed.
+     * Reads all [length] bytes to [destination] buffer or fails if channel has been closed.
      * Suspends if not enough bytes available.
      */
-    public actual suspend fun readFully(dst: ByteArray, offset: Int, length: Int)
+    public actual suspend fun readFully(destination: ByteArray, offset: Int, length: Int)
 
-    public actual suspend fun readFully(dst: IoBuffer, n: Int)
+    public actual suspend fun readFully(destination: IoBuffer, n: Int)
 
     suspend fun readFully(dst: ArrayBuffer, offset: Int, length: Int)
 

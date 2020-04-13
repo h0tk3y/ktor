@@ -2,6 +2,9 @@ package io.ktor.utils.io
 
 import io.ktor.utils.io.bits.*
 import io.ktor.utils.io.core.*
+import io.ktor.utils.io.core.internal.*
+import writePacket
+import writeStringUtf8
 import kotlin.test.*
 
 open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
@@ -13,11 +16,10 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
         launch {
             expect(3)
 
-            val bb = IoBuffer.NoPool.borrow()
-            val rc = ch.readAvailable(bb) // should suspend
+            val readCount = channel.readAvailable(ByteArray(1024)) // should suspend
 
             expect(5)
-            assertEquals(4, rc)
+            assertEquals(4, readCount)
 
             expect(6)
         }
@@ -26,7 +28,7 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
         yield()
 
         expect(4)
-        ch.writeInt(0xff) // should resume
+        channel.writeInt(0xff) // should resume
 
         yield()
 
@@ -40,13 +42,9 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
         launch {
             expect(3)
 
-            val bb = IoBuffer.NoPool.borrow()
-            bb.resetForWrite(4)
-            ch.readFully(bb) // should suspend
+            channel.readFully(ByteArray(4)) // should suspend
 
             expect(5)
-
-            assertEquals(4, bb.readRemaining)
 
             expect(6)
         }
@@ -55,7 +53,7 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
         yield()
 
         expect(4)
-        ch.writeInt(0xff) // should resume
+        channel.writeInt(0xff) // should resume
 
         yield()
 
@@ -66,14 +64,12 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
     fun testReadAfterAvailable() = runTest {
         expect(1)
 
-        ch.writeInt(0xff) // should resume
+        channel.writeInt(0xff) // should resume
 
         launch {
             expect(3)
 
-            val bb = IoBuffer.NoPool.borrow()
-            bb.resetForWrite(10)
-            val rc = ch.readAvailable(bb) // should NOT suspend
+            val rc = channel.readAvailable(ByteArray(10)) // should NOT suspend
 
             expect(4)
             assertEquals(4, rc)
@@ -91,18 +87,13 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
     fun testReadAfterAvailable2() = runTest {
         expect(1)
 
-        ch.writeInt(0xff) // should resume
+        channel.writeInt(0xff) // should resume
 
         launch {
             expect(3)
-
-            val bb = IoBuffer.NoPool.borrow()
-            bb.resetForWrite(4)
-            ch.readFully(bb) // should NOT suspend
+            channel.readFully(ByteArray(4)) // should NOT suspend
 
             expect(4)
-            assertEquals(4, bb.readRemaining)
-
             expect(5)
         }
 
@@ -116,7 +107,7 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
     fun testReadToEmpty() = runTest {
         expect(1)
 
-        val rc = ch.readAvailable(IoBuffer.NoPool.borrow().also { it.resetForWrite(0) })
+        val rc = channel.readAvailable(EmptyByteArray)
 
         expect(2)
 
@@ -129,10 +120,10 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
     fun testReadToEmptyFromFailedChannel() = runTest {
         expect(1)
 
-        ch.close(ExpectedException())
+        channel.close(ExpectedException())
 
         try {
-            ch.readAvailable(IoBuffer.NoPool.borrow().also { it.resetForWrite(0) })
+            channel.readAvailable(EmptyByteArray)
             fail("Should throw exception")
         } catch (expected: ExpectedException) {
         }
@@ -144,9 +135,9 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
     fun testReadToEmptyFromClosedChannel() = runTest {
         expect(1)
 
-        ch.close()
+        channel.close()
 
-        val rc = ch.readAvailable(IoBuffer.NoPool.borrow().also { it.resetForWrite(0) })
+        val rc = channel.readAvailable(EmptyByteArray)
 
         expect(2)
 
@@ -159,9 +150,9 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
     fun testReadFullyToEmptyFromClosedChannel() = runTest {
         expect(1)
 
-        ch.close()
+        channel.close()
 
-        ch.readFully(IoBuffer.NoPool.borrow().also { it.resetForWrite(0) })
+        channel.readFully(EmptyByteArray)
 
         finish(2)
     }
@@ -170,9 +161,9 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
     fun testReadFullyFromClosedChannel() = runTest() {
         expect(1)
 
-        ch.close()
+        channel.close()
         try {
-            ch.readFully(IoBuffer.NoPool.borrow().also { it.resetForWrite(1) })
+            channel.readFully(EmptyByteArray)
             fail("Should throw exception")
         } catch (expected: Throwable) {
         }
@@ -184,10 +175,10 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
     fun testReadFullyToEmptyFromFailedChannel() = runTest {
         expect(1)
 
-        ch.close(ExpectedException())
+        channel.close(ExpectedException())
 
         try {
-            ch.readFully(IoBuffer.NoPool.borrow().also { it.resetForWrite(0) })
+            channel.readFully(EmptyByteArray)
             fail("Should throw exception")
         } catch (expected: ExpectedException) {
         }
@@ -200,7 +191,7 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
         launch {
             expect(1)
 
-            ch.writePacket {
+            channel.writePacket {
                 writeLong(0x1234567812345678L)
             }
 
@@ -210,8 +201,8 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
         yield()
         expect(3)
 
-        assertEquals(0x1234567812345678L, ch.readLong())
-        assertEquals(0, ch.availableForRead)
+        assertEquals(0x1234567812345678L, channel.readLong())
+        assertEquals(0, channel.availableForRead)
 
         finish(4)
     }
@@ -221,11 +212,11 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
         launch {
             expect(1)
 
-            ch.writeFully(ByteArray(4088))
+            channel.writeFully(ByteArray(4088))
 
             expect(2)
 
-            ch.writePacket(8) {
+            channel.writePacket(8) {
                 writeLong(0x1234567812345678L)
             }
 
@@ -235,16 +226,16 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
         yield()
         expect(3)
 
-        ch.readFully(ByteArray(9))
+        channel.readFully(ByteArray(9))
         yield()
         expect(5)
 
-        ch.readFully(ByteArray(4088 - 9))
+        channel.readFully(ByteArray(4088 - 9))
 
         expect(6)
 
-        assertEquals(0x1234567812345678L, ch.readLong())
-        assertEquals(0, ch.availableForRead)
+        assertEquals(0x1234567812345678L, channel.readLong())
+        assertEquals(0, channel.availableForRead)
 
         finish(7)
     }
@@ -252,10 +243,10 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
     @Test
     fun testNewWriteBlock() = runTest {
         launch {
-            assertEquals(0x11223344, ch.readInt())
+            assertEquals(0x11223344, channel.readInt())
         }
 
-        ch.write (4) { freeSpace, startOffset, endExclusive ->
+        channel.write (4) { freeSpace, startOffset, endExclusive ->
             if (endExclusive - startOffset < 4) {
                 fail("Not enough free space for writing 4 bytes: ${endExclusive - startOffset}")
             }
@@ -264,30 +255,33 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
 
             4
         }
-        ch.close()
+        channel.close()
     }
 
     @Test
     fun testReadBlock() = runTest {
-        ch.writeLong(0x1234567812345678L)
-        ch.flush()
+        channel.writeLong(0x1234567812345678L)
+        channel.flush()
 
-        ch.readSession {
-            assertEquals(0x1234567812345678L, request()!!.readLong())
-        }
+        val packet = channel.readPacket(8)
+        assertEquals(0x1234567812345678L, packet.readLong())
 
         finish(1)
     }
 
     @Test
     fun testReadBlockSuspend() = runTest {
-        ch.writeByte(0x12)
+        channel.writeByte(0x12)
 
         launch {
             expect(1)
-            ch.readSuspendableSession {
-                await(8)
-                assertEquals(0x1234567812345678L, request(8)!!.readLong())
+            var readCount = 0
+            while (readCount < 8) {
+                channel.read { memory, start, end ->
+                    val count = end - start
+                    readCount += count
+                    count
+                }
             }
 
             expect(3)
@@ -296,36 +290,12 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
         yield()
         expect(2)
 
-        ch.writeLong(0x3456781234567800L)
+        channel.writeLong(0x3456781234567800L)
         yield()
 
         expect(4)
-        ch.readByte()
-        assertEquals(0, ch.availableForRead)
-
-        finish(5)
-    }
-
-    @Test
-    fun testReadBlockSuspend2() = runTest {
-        launch {
-            expect(1)
-            ch.readSuspendableSession {
-                await(8)
-                assertEquals(0x1234567812345678L, request(8)!!.readLong())
-            }
-
-            expect(3)
-        }
-
-        yield()
-        expect(2)
-
-        ch.writeLong(0x1234567812345678L)
-        yield()
-
-        expect(4)
-        assertEquals(0, ch.availableForRead)
+        channel.readByte()
+        assertEquals(0, channel.availableForRead)
 
         finish(5)
     }
@@ -333,11 +303,11 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
     @Test
     fun testReadMemoryBlock() = runTest {
         launch {
-            ch.writeInt(0x11223344)
-            ch.close()
+            channel.writeInt(0x11223344)
+            channel.close()
         }
 
-        ch.read(4) { source, start, endExclusive ->
+        channel.read(4) { source, start, endExclusive ->
             if (endExclusive - start < 4) {
                 fail("It should be 4 bytes available, got ${endExclusive - start}")
             }
@@ -346,19 +316,19 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
             4
         }
 
-        assertEquals(0, ch.availableForRead)
+        assertEquals(0, channel.availableForRead)
     }
 
     @Test
     fun testWriteByteSuspend() = runTest {
         launch {
             expect(1)
-            ch.writeByte(1)
-            ch.writeFully(ByteArray(ch.availableForWrite))
+            channel.writeByte(1)
+            channel.writeFully(ByteArray(channel.availableForWrite))
             expect(2)
-            ch.writeByte(1)
+            channel.writeByte(1)
             expect(5)
-            ch.close()
+            channel.close()
         }
 
         yield()
@@ -367,10 +337,10 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
         expect(4)
         yield()
 
-        ch.readByte()
+        channel.readByte()
         yield()
 
-        ch.readRemaining()
+        channel.readRemaining()
         finish(6)
     }
 
@@ -378,12 +348,12 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
     fun testWriteShortSuspend() = runTest {
         launch {
             expect(1)
-            ch.writeByte(1)
-            ch.writeFully(ByteArray(ch.availableForWrite))
+            channel.writeByte(1)
+            channel.writeFully(ByteArray(channel.availableForWrite))
             expect(2)
-            ch.writeShort(1)
+            channel.writeShort(1)
             expect(5)
-            ch.close()
+            channel.close()
         }
 
         yield()
@@ -392,10 +362,10 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
         expect(4)
         yield()
 
-        ch.readShort()
+        channel.readShort()
         yield()
 
-        ch.readRemaining()
+        channel.readRemaining()
         finish(6)
     }
 
@@ -403,12 +373,12 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
     fun testWriteIntSuspend() = runTest {
         launch {
             expect(1)
-            ch.writeByte(1)
-            ch.writeFully(ByteArray(ch.availableForWrite))
+            channel.writeByte(1)
+            channel.writeFully(ByteArray(channel.availableForWrite))
             expect(2)
-            ch.writeInt(1)
+            channel.writeInt(1)
             expect(5)
-            ch.close()
+            channel.close()
         }
 
         yield()
@@ -417,10 +387,10 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
         expect(4)
         yield()
 
-        ch.readInt()
+        channel.readInt()
         yield()
 
-        ch.readRemaining()
+        channel.readRemaining()
         finish(6)
     }
 
@@ -429,55 +399,55 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
         val size = 4096 - 8 - 3
 
         expect(1)
-        val buffer = IoBuffer.NoPool.borrow()
-        buffer.resetForWrite(size)
-        repeat(size) {
-            buffer.writeByte(1)
+        val buffer = buildPacket {
+            repeat(size) {
+                writeByte(1)
+            }
         }
 
-        ch.writeFully(buffer)
+        channel.writePacket(buffer)
         expect(2)
 
         launch {
             expect(4)
-            debug(ch.readPacket(size))
+            debug(channel.readPacket(size))
             expect(5)
         }
 
         // coroutine is pending
         expect(3)
-        ch.writeInt(0x11223344)
+        channel.writeInt(0x11223344)
         yield()
         expect(6)
 
-        assertEquals(0x11223344, ch.readInt())
+        assertEquals(0x11223344, channel.readInt())
 
         finish(7)
     }
 
     @Test
     fun testWriteByteByByte() = runTest {
-        ch.writeByte(1)
-        ch.flush()
-        ch.writeByte(2)
-        ch.flush()
+        channel.writeByte(1)
+        channel.flush()
+        channel.writeByte(2)
+        channel.flush()
 
-        assertEquals(2, ch.availableForRead)
-        ch.discardExact(2)
+        assertEquals(2, channel.availableForRead)
+        channel.discardExact(2)
     }
 
     @Test
     fun testWriteByteByByteLong() = runTest {
         launch {
             repeat(16384) {
-                ch.writeByte(it and 0x0f)
-                ch.flush()
+                channel.writeByte(it and 0x0f)
+                channel.flush()
             }
-            ch.close()
+            channel.close()
         }
 
         yield()
-        ch.discardExact(16384)
+        channel.discardExact(16384)
     }
 
     private fun debug(p: ByteReadPacket) {
@@ -488,12 +458,12 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
     fun testWriteLongSuspend() = runTest {
         launch {
             expect(1)
-            ch.writeByte(1)
-            ch.writeFully(ByteArray(ch.availableForWrite))
+            channel.writeByte(1)
+            channel.writeFully(ByteArray(channel.availableForWrite))
             expect(2)
-            ch.writeLong(1)
+            channel.writeLong(1)
             expect(5)
-            ch.close()
+            channel.close()
         }
 
         yield()
@@ -502,10 +472,10 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
         expect(4)
         yield()
 
-        ch.readLong()
+        channel.readLong()
         yield()
 
-        ch.readRemaining()
+        channel.readRemaining()
         finish(6)
     }
 
@@ -513,38 +483,38 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
     fun testDiscardExisting() = runTest {
         launch {
             expect(1)
-            ch.writeInt(1)
-            ch.writeInt(2)
+            channel.writeInt(1)
+            channel.writeInt(2)
             expect(2)
         }
 
         yield()
         expect(3)
 
-        assertEquals(4, ch.discard(4))
-        assertEquals(2, ch.readInt())
+        assertEquals(4, channel.discard(4))
+        assertEquals(2, channel.readInt())
 
         finish(4)
     }
 
     @Test
     fun testDiscardPartiallyExisting() = runTest {
-        ch.writeInt(1)
+        channel.writeInt(1)
 
         launch {
             expect(1)
-            assertEquals(8, ch.discard(8))
+            assertEquals(8, channel.discard(8))
             expect(3)
         }
 
         yield()
         expect(2)
 
-        ch.writeInt(2)
+        channel.writeInt(2)
         yield()
 
         expect(4)
-        assertEquals(0, ch.availableForRead)
+        assertEquals(0, channel.availableForRead)
         finish(5)
     }
 
@@ -552,22 +522,22 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
     fun testDiscardPartiallyExisting2() = runTest {
         launch {
             expect(1)
-            assertEquals(8, ch.discard(8))
+            assertEquals(8, channel.discard(8))
             expect(4)
         }
 
         yield()
 
         expect(2)
-        ch.writeInt(1)
+        channel.writeInt(1)
         yield()
         expect(3)
-        assertEquals(0, ch.availableForRead)
+        assertEquals(0, channel.availableForRead)
 
-        ch.writeInt(2)
+        channel.writeInt(2)
         yield()
         expect(5)
-        assertEquals(0, ch.availableForRead)
+        assertEquals(0, channel.availableForRead)
         finish(6)
     }
 
@@ -575,20 +545,20 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
     fun testDiscardClose() = runTest {
         launch {
             expect(1)
-            assertEquals(8, ch.discard())
+            assertEquals(8, channel.discard())
             expect(4)
         }
 
         yield()
 
         expect(2)
-        ch.writeInt(1)
+        channel.writeInt(1)
         yield()
-        ch.writeInt(2)
+        channel.writeInt(2)
         yield()
 
         expect(3)
-        ch.close()
+        channel.close()
         yield()
 
         finish(5)
@@ -596,10 +566,10 @@ open class ByteBufferChannelScenarioTest : ByteChannelTestBase(true) {
 
     @Test
     fun testUnicode() = runTest {
-        ch.writeStringUtf8("test - \u0422")
-        ch.close()
+        channel.writeStringUtf8("test - \u0422")
+        channel.close()
 
-        assertEquals("test - \u0422", ch.readUTF8Line())
+        assertEquals("test - \u0422", channel.readUTF8Line())
     }
 
     class ExpectedException : Exception()

@@ -51,7 +51,7 @@ internal class WriteSessionImpl(channel: ByteBufferChannel) : WriterSuspendSessi
             writtenFailed(n)
         }
         locked -= n
-        current.bytesWrittenFromSesion(byteBuffer, ringBufferCapacity, n)
+        current.bytesWrittenFromSession(byteBuffer, ringBufferCapacity, n)
     }
 
     private fun writtenFailed(n: Int): Nothing {
