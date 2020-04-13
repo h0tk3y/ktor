@@ -25,7 +25,7 @@ internal open class ByteBufferChannel(
     override val autoFlush: Boolean,
     private val pool: ObjectPool<ReadWriteBufferState.Initial> = BufferObjectPool,
     internal val reservedSize: Int = RESERVED_SIZE
-) : ByteChannel, ByteReadChannel, ByteWriteChannel, LookAheadSuspendSession, HasReadSession, HasWriteSession {
+) : ByteChannel, ByteReadChannel, ByteWriteChannel {
 
     // internal constructor for reading of byte buffers
     constructor(content: ByteBuffer) : this(false, BufferObjectNoPool, 0) {
@@ -957,13 +957,13 @@ internal open class ByteBufferChannel(
         }
     }
 
-    override suspend fun writeByte(b: Byte) {
-        joining?.let { resolveDelegation(this, it)?.let { return it.writeByte(b) } }
+    override suspend fun writeByte(value: Byte) {
+        joining?.let { resolveDelegation(this, it)?.let { return it.writeByte(value) } }
 
-        val buffer = setupStateForWrite() ?: return delegateByte(b)
+        val buffer = setupStateForWrite() ?: return delegateByte(value)
         val c = state.capacity
 
-        return tryWriteByte(buffer, b, c)
+        return tryWriteByte(buffer, value, c)
     }
 
     private suspend fun tryWriteByte(buffer: ByteBuffer, b: Byte, c: RingBufferCapacity) {
@@ -1006,13 +1006,13 @@ internal open class ByteBufferChannel(
         return delegateSuspend(joined) { writeShort(s) }
     }
 
-    override suspend fun writeShort(s: Short) {
-        joining?.let { resolveDelegation(this, it)?.let { return it.writeShort(s) } }
+    override suspend fun writeShort(value: Short) {
+        joining?.let { resolveDelegation(this, it)?.let { return it.writeShort(value) } }
 
-        val buffer = setupStateForWrite() ?: return delegateShort(s)
+        val buffer = setupStateForWrite() ?: return delegateShort(value)
         val c = state.capacity
 
-        return tryWriteShort(buffer, s, c)
+        return tryWriteShort(buffer, value, c)
     }
 
     private fun doWrite(buffer: ByteBuffer, s: Short, c: RingBufferCapacity) {
@@ -1085,20 +1085,20 @@ internal open class ByteBufferChannel(
         return false
     }
 
-    override suspend fun writeInt(i: Int) {
+    override suspend fun writeInt(value: Int) {
         val buffer = setupStateForWrite()
         if (buffer == null) {
             val delegation = resolveDelegation(this, joining!!)
             @Suppress("SuspiciousEqualsCombination")
-            if (delegation != null && delegation !== this) return delegation.writeInt(i)
-            else return delegateSuspend(joining!!, { writeInt(i) })
+            if (delegation != null && delegation !== this) return delegation.writeInt(value)
+            else return delegateSuspend(joining!!, { writeInt(value) })
         }
         val c = state.capacity
 //
-        if (buffer.tryWriteInt(i, c)) {
+        if (buffer.tryWriteInt(value, c)) {
             return
         }
-        return buffer.writeIntSuspend(i, c)
+        return buffer.writeIntSuspend(value, c)
     }
 
     private tailrec suspend fun ByteBuffer.writeIntSuspend(i: Int, c: RingBufferCapacity) {
@@ -1148,14 +1148,14 @@ internal open class ByteBufferChannel(
         return false
     }
 
-    override suspend fun writeLong(l: Long) {
-        joining?.let { resolveDelegation(this, it)?.let { return it.writeLong(l) } }
+    override suspend fun writeLong(value: Long) {
+        joining?.let { resolveDelegation(this, it)?.let { return it.writeLong(value) } }
 
-        val buffer = setupStateForWrite() ?: return delegateLong(l)
+        val buffer = setupStateForWrite() ?: return delegateLong(value)
         val c = state.capacity
 
-        if (!buffer.tryWriteLong(l, c)) {
-            return buffer.writeLongSuspend(l, c)
+        if (!buffer.tryWriteLong(value, c)) {
+            return buffer.writeLongSuspend(value, c)
         }
     }
 
@@ -1180,12 +1180,12 @@ internal open class ByteBufferChannel(
         }
     }
 
-    override suspend fun writeDouble(d: Double) {
-        return writeLong(java.lang.Double.doubleToRawLongBits(d))
+    override suspend fun writeDouble(value: Double) {
+        return writeLong(java.lang.Double.doubleToRawLongBits(value))
     }
 
-    override suspend fun writeFloat(f: Float) {
-        return writeInt(java.lang.Float.floatToRawIntBits(f))
+    override suspend fun writeFloat(value: Float) {
+        return writeInt(java.lang.Float.floatToRawIntBits(value))
     }
 
     override suspend fun writeAvailable(src: ByteBuffer): Int {
@@ -1508,14 +1508,14 @@ internal open class ByteBufferChannel(
         return 0
     }
 
-    override suspend fun writeFully(src: ByteArray, offset: Int, length: Int) {
-        joining?.let { resolveDelegation(this, it)?.let { return it.writeFully(src, offset, length) } }
+    override suspend fun writeFully(source: ByteArray, offset: Int, length: Int) {
+        joining?.let { resolveDelegation(this, it)?.let { return it.writeFully(source, offset, length) } }
 
         var rem = length
         var off = offset
 
         while (rem > 0) {
-            val s = writeAsMuchAsPossible(src, off, rem)
+            val s = writeAsMuchAsPossible(source, off, rem)
             if (s == 0) break
 
             off += s
@@ -1524,7 +1524,7 @@ internal open class ByteBufferChannel(
 
         if (rem == 0) return
 
-        return writeFullySuspend(src, off, rem)
+        return writeFullySuspend(source, off, rem)
     }
 
     private tailrec suspend fun writeFullySuspend(src: ByteArray, offset: Int, length: Int) {
@@ -1533,12 +1533,12 @@ internal open class ByteBufferChannel(
         return writeFullySuspend(src, offset + copied, length - copied)
     }
 
-    override suspend fun writeAvailable(src: ByteArray, offset: Int, length: Int): Int {
-        joining?.let { resolveDelegation(this, it)?.let { return it.writeAvailable(src, offset, length) } }
+    override suspend fun writeAvailable(source: ByteArray, offset: Int, length: Int): Int {
+        joining?.let { resolveDelegation(this, it)?.let { return it.writeAvailable(source, offset, length) } }
 
-        val size = writeAsMuchAsPossible(src, offset, length)
+        val size = writeAsMuchAsPossible(source, offset, length)
         if (size > 0) return size
-        return writeSuspend(src, offset, length)
+        return writeSuspend(source, offset, length)
     }
 
     private suspend fun writeSuspend(src: ByteArray, offset: Int, length: Int): Int {

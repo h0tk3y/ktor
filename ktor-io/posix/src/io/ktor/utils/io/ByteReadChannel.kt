@@ -149,22 +149,6 @@ public actual interface ByteReadChannel {
     public actual suspend fun readFloat(): Float
 
     /**
-     * Starts non-suspendable read session. After channel preparation [consumer] lambda will be invoked immediately
-     * event if there are no bytes available for read yet.
-     */
-    @Suppress("DEPRECATION")
-    @Deprecated("Use read { } instead.")
-    public actual fun readSession(consumer: ReadSession.() -> Unit)
-
-    /**
-     * Starts a suspendable read session. After channel preparation [consumer] lambda will be invoked immediately
-     * even if there are no bytes available for read yet. [consumer] lambda could suspend as much as needed.
-     */
-    @Suppress("DEPRECATION")
-    @Deprecated("Use read { } instead.")
-    public actual suspend fun readSuspendableSession(consumer: suspend SuspendableReadSession.() -> Unit)
-
-    /**
      * Reads a line of UTF-8 characters to the specified [out] buffer up to [limit] characters.
      * Supports both CR-LF and LF line endings.
      * Throws an exception if the specified [limit] has been exceeded.
@@ -234,10 +218,7 @@ public actual interface ByteReadChannel {
         /**
          * Empty closed [ByteReadChannel].
          */
-        public actual val Empty: ByteReadChannel = ByteChannelNative(
-            IoBuffer.Empty, false,
-            io.ktor.utils.io.core.internal.ChunkBuffer.EmptyPool
-        ).apply {
+        public actual val Empty: ByteReadChannel = ByteChannelNative().apply {
             close(null)
         }
     }

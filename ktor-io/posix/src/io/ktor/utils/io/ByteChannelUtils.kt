@@ -8,33 +8,27 @@ import io.ktor.utils.io.internal.*
  * Creates buffered channel for asynchronous reading and writing of sequences of bytes.
  */
 public actual fun ByteChannel(autoFlush: Boolean): ByteChannel {
-    return ByteChannelNative(IoBuffer.Empty, autoFlush)
+    return ByteChannelNative(autoFlush)
 }
 
 /**
  * Creates channel for reading from the specified byte array.
  */
-public actual fun ByteReadChannel(content: ByteArray, offset: Int, length: Int): ByteReadChannel {
-    if (content.isEmpty()) return ByteReadChannel.Empty
-    val head = IoBuffer.Pool.borrow()
-    var tail = head
+public actual fun ByteReadChannel(
+    content: ByteArray,
+    offset: Int,
+    length: Int
+): ByteReadChannel {
+    require(offset >= 0)
+    require(length >= 0)
+    require(offset + length <= content.size)
 
-    var start = offset
-    val end = start + length
-    while (true) {
-        tail.reserveEndGap(8)
-        val size = minOf(end - start, tail.writeRemaining)
-        (tail as Buffer).writeFully(content, start, size)
-        start += size
-
-        if (start == end) break
-
-        val current = tail
-        tail = IoBuffer.Pool.borrow()
-        current.next = tail
+    if (content.isEmpty() || length == 0) {
+        return ByteReadChannel.Empty
     }
 
-    return ByteChannelNative(head, false).apply { close() }
+    val initial = content.copyOfRange(offset, offset + length)
+    return ByteChannelNative(autoFlush = false, initial)
 }
 
 public actual suspend fun ByteReadChannel.joinTo(

@@ -9,105 +9,86 @@ import io.ktor.utils.io.core.*
  * Operations on this channel cannot be invoked concurrently, unless explicitly specified otherwise
  * in description. Exceptions are [close] and [flush].
  */
-actual interface ByteWriteChannel {
+public actual interface ByteWriteChannel {
     /**
      * Returns number of bytes that can be written without suspension. Write operations do no suspend and return
      * immediately when this number is at least the number of bytes requested for write.
      */
-    actual val availableForWrite: Int
+    public actual val availableForWrite: Int
 
     /**
      * Returns `true` is channel has been closed and attempting to write to the channel will cause an exception.
      */
-    actual val isClosedForWrite: Boolean
+    public actual val isClosedForWrite: Boolean
 
     /**
      * Returns `true` if channel flushes automatically all pending bytes after every write function call.
      * If `false` then flush only happens at manual [flush] invocation or when the buffer is full.
      */
-    actual val autoFlush: Boolean
-
-    /**
-     * Byte order that is used for multi-byte write operations
-     * (such as [writeShort], [writeInt], [writeLong], [writeFloat], and [writeDouble]).
-     */
-    @Deprecated(
-        "Setting byte order is no longer supported. Read/write in big endian and use reverseByteOrder() extensions.",
-        level = DeprecationLevel.ERROR
-    )
-    actual var writeByteOrder: ByteOrder
+    public actual val autoFlush: Boolean
 
     /**
      * Number of bytes written to the channel.
      * It is not guaranteed to be atomic so could be updated in the middle of write operation.
      */
-    @Deprecated("Counter is no longer supported")
-    actual val totalBytesWritten: Long
+    public actual val totalBytesWritten: Long
 
     /**
      * An closure cause exception or `null` if closed successfully or not yet closed
      */
-    actual val closedCause: Throwable?
+    public actual val closedCause: Throwable?
 
     /**
      * Writes as much as possible and only suspends if buffer is full
      */
-    actual suspend fun writeAvailable(src: ByteArray, offset: Int, length: Int): Int
-
-    actual suspend fun writeAvailable(src: IoBuffer): Int
+    public actual suspend fun writeAvailable(source: ByteArray, offset: Int, length: Int): Int
 
     /**
-     * Writes all [src] bytes and suspends until all bytes written. Causes flush if buffer filled up or when [autoFlush]
+     * Writes all [source] bytes and suspends until all bytes written. Causes flush if buffer filled up or when [autoFlush]
      * Crashes if channel get closed while writing.
      */
-    actual suspend fun writeFully(src: ByteArray, offset: Int, length: Int)
-
-    actual suspend fun writeFully(src: IoBuffer)
-
-    @Suppress("DEPRECATION")
-    @Deprecated("Use write { } instead.")
-    actual suspend fun writeSuspendSession(visitor: suspend WriterSuspendSession.() -> Unit)
+    public actual suspend fun writeFully(source: ByteArray, offset: Int, length: Int)
 
     /**
      * Writes a [packet] fully or fails if channel get closed before the whole packet has been written
      */
-    actual suspend fun writePacket(packet: ByteReadPacket)
+    public actual suspend fun writePacket(packet: ByteReadPacket)
 
     /**
      * Writes long number and suspends until written.
      * Crashes if channel get closed while writing.
      */
-    actual suspend fun writeLong(l: Long)
+    public actual suspend fun writeLong(value: Long)
 
     /**
      * Writes int number and suspends until written.
      * Crashes if channel get closed while writing.
      */
-    actual suspend fun writeInt(i: Int)
+    public actual suspend fun writeInt(value: Int)
 
     /**
      * Writes short number and suspends until written.
      * Crashes if channel get closed while writing.
      */
-    actual suspend fun writeShort(s: Short)
+    public actual suspend fun writeShort(value: Short)
 
     /**
      * Writes byte and suspends until written.
      * Crashes if channel get closed while writing.
      */
-    actual suspend fun writeByte(b: Byte)
+    public actual suspend fun writeByte(value: Byte)
 
     /**
      * Writes double number and suspends until written.
      * Crashes if channel get closed while writing.
      */
-    actual suspend fun writeDouble(d: Double)
+    public actual suspend fun writeDouble(value: Double)
 
     /**
      * Writes float number and suspends until written.
      * Crashes if channel get closed while writing.
      */
-    actual suspend fun writeFloat(f: Float)
+    public actual suspend fun writeFloat(value: Float)
 
     /**
      * Closes this channel with an optional exceptional [cause].
@@ -127,7 +108,7 @@ actual interface ByteWriteChannel {
      * coroutine then the corresponding coroutine will be cancelled with [cause]. If no [cause] provided then no
      * cancellation will be propagated.
      */
-    actual fun close(cause: Throwable?): Boolean
+    public actual fun close(cause: Throwable?): Boolean
 
     /**
      * Flushes all pending write bytes making them available for read.
@@ -135,5 +116,5 @@ actual interface ByteWriteChannel {
      * This function is thread-safe and can be invoked in any thread at any time.
      * It does nothing when invoked on a closed channel.
      */
-    actual fun flush()
+    public actual fun flush()
 }

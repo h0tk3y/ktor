@@ -29,6 +29,9 @@ import kotlinx.coroutines.*
  * concurrently with any other operations and between themselves at any time.
  */
 public interface ByteChannel : ByteReadChannel, ByteWriteChannel {
+    /**
+     * Add job to current [ByteChannel]. The [Job.cancel] will be connected to [ByteChannel.cancel].
+     */
     public fun attachJob(job: Job)
 }
 
@@ -37,24 +40,19 @@ public interface ByteChannel : ByteReadChannel, ByteWriteChannel {
  */
 public expect fun ByteChannel(autoFlush: Boolean = false): ByteChannel
 
-
 /**
  * Creates channel for reading from the specified byte array. Please note that it could use [content] directly
  * or copy it's bytes depending on the platform
  */
-public expect fun ByteReadChannel(content: ByteArray, offset: Int = 0, length: Int = content.size): ByteReadChannel
-
-public fun ByteReadChannel(text: String, charset: Charset = Charsets.UTF_8): ByteReadChannel =
-    ByteReadChannel(text.toByteArray(charset)) // TODO optimize to encode parts on demand
-
+public expect fun ByteReadChannel(
+    content: ByteArray,
+    offset: Int = 0,
+    length: Int = content.size
+): ByteReadChannel
 
 /**
- * Byte channel that is always empty.
+ * Create [ByteReadChannel] from [text] using [charset].
  */
-@Deprecated(
-    "Use ByteReadChannel.Empty instead", ReplaceWith("ByteReadChannel.Empty"),
-    level = DeprecationLevel.ERROR
-)
-public val EmptyByteReadChannel: ByteReadChannel
-    get() = ByteReadChannel.Empty
-
+public fun ByteReadChannel(
+    text: String, charset: Charset = Charsets.UTF_8
+): ByteReadChannel = ByteReadChannel(text.toByteArray(charset))

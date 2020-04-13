@@ -4,180 +4,212 @@
 
 package io.ktor.utils.io
 
-import io.ktor.utils.io.concurrent.*
 import io.ktor.utils.io.core.*
-import io.ktor.utils.io.core.ChunkBuffer
 import io.ktor.utils.io.core.internal.*
-import io.ktor.utils.io.pool.*
 import kotlinx.cinterop.*
-import kotlinx.coroutines.*
-import kotlin.native.concurrent.*
 
 internal class ByteChannelNative(
-    initial: IoBuffer,
-    autoFlush: Boolean,
-    pool: ObjectPool<ChunkBuffer> = ChunkBuffer.Pool
-) : ByteChannelSequentialBase(initial, autoFlush, pool) {
-    private var attachedJob: Job? by shared(null)
+    override val autoFlush: Boolean = false,
+    initial: ByteArray = EmptyByteArray
+) : ByteChannel {
+    override val totalBytesWritten: Long
+        get() = TODO("Not yet implemented")
 
-    init {
-        freeze()
-    }
+    override val closedCause: Throwable?
+        get() = TODO("Not yet implemented")
 
-    @OptIn(InternalCoroutinesApi::class)
-    override fun attachJob(job: Job) {
-        attachedJob?.cancel()
-        attachedJob = job
-        job.invokeOnCompletion(onCancelling = true) { cause ->
-            attachedJob = null
-            if (cause != null) cancel(cause)
-        }
-    }
-
-    override suspend fun readAvailable(dst: CPointer<ByteVar>, offset: Int, length: Int): Int =
-        readAvailable(dst, offset.toLong(), length.toLong())
-
-    override suspend fun readAvailable(dst: CPointer<ByteVar>, offset: Long, length: Long): Int {
-        require(offset >= 0L)
-        require(length >= 0L)
-
-        return when {
-            closedCause != null -> throw closedCause!!
-            readable.canRead() -> {
-                val size = tryReadCPointer(dst, offset, length)
-                afterRead()
-                size
-            }
-            closed -> readAvailableClosed()
-            length == 0L -> 0
-            else -> readAvailableSuspend(dst, offset, length)
-        }
-    }
-
-    private suspend fun readAvailableSuspend(dst: CPointer<ByteVar>, offset: Long, length: Long): Int {
-        awaitSuspend(1)
-        return readAvailable(dst, offset, length)
-    }
-
-    override suspend fun readFully(dst: CPointer<ByteVar>, offset: Int, length: Int) {
-        return readFully(dst, offset.toLong(), length.toLong())
-    }
-
-    override suspend fun readFully(dst: CPointer<ByteVar>, offset: Long, length: Long) {
-        require(offset >= 0L)
-        require(length >= 0L)
-
-        return when {
-            closedCause != null -> throw closedCause!!
-            readable.remaining >= length -> {
-                tryReadCPointer(dst, offset, length)
-                afterRead()
-            }
-            closed -> throw EOFException("Channel is closed and not enough bytes available: required $length but $availableForRead available")
-            else -> readFullySuspend(dst, offset, length)
-        }
-    }
-
-    private suspend fun readFullySuspend(dst: CPointer<ByteVar>, offset: Long, length: Long) {
-        var position = offset
-        var rem = length
-
-        while (rem > 0) {
-            val rc = readAvailable(dst, position, rem).toLong()
-            if (rc == -1L) break
-            position += rc
-            rem -= rc
-        }
-
-        if (rem > 0) {
-            throw EOFException("Channel is closed and not enough bytes available: required $rem but $availableForRead available")
-        }
-    }
-
-    override suspend fun writeFully(src: CPointer<ByteVar>, offset: Int, length: Int) {
-        return writeFully(src, offset.toLong(), length.toLong())
-    }
-
-    override suspend fun writeFully(src: CPointer<ByteVar>, offset: Long, length: Long) {
-        if (notFull.check()) {
-            val size = tryWriteCPointer(src, offset, length).toLong()
-
-            if (length == size) {
-                afterWrite()
-                return
-            }
-
-            flush()
-
-            return writeFullySuspend(src, offset + size, length - size)
-        }
-
-        return writeFullySuspend(src, offset, length)
-    }
-
-    private suspend fun writeFullySuspend(src: CPointer<ByteVar>, offset: Long, length: Long) {
-        var rem = length
-        var position = offset
-
-        while (rem > 0) {
-            awaitFreeSpace()
-            val size = tryWriteCPointer(src, position, rem).toLong()
-            rem -= size
-            position += size
-            if (rem > 0) flush()
-            else afterWrite()
-        }
+    override suspend fun writeAvailable(source: ByteArray, offset: Int, length: Int): Int {
+        TODO("Not yet implemented")
     }
 
     override suspend fun writeAvailable(src: CPointer<ByteVar>, offset: Int, length: Int): Int {
-        return writeAvailable(src, offset.toLong(), length.toLong())
+        TODO("Not yet implemented")
     }
 
     override suspend fun writeAvailable(src: CPointer<ByteVar>, offset: Long, length: Long): Int {
-        if (notFull.check()) {
-            val size = tryWriteCPointer(src, offset, length)
-            afterWrite()
-            return size
-        }
+        TODO("Not yet implemented")
+    }
 
-        return writeAvailableSuspend(src, offset, length)
+    override suspend fun writeFully(source: ByteArray, offset: Int, length: Int) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun writeFully(src: CPointer<ByteVar>, offset: Int, length: Int) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun writeFully(src: CPointer<ByteVar>, offset: Long, length: Long) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun writePacket(packet: ByteReadPacket) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun writeLong(value: Long) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun writeInt(value: Int) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun writeShort(value: Short) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun writeByte(value: Byte) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun writeDouble(value: Double) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun writeFloat(value: Float) {
+        TODO("Not yet implemented")
     }
 
     override fun close(cause: Throwable?): Boolean {
-        val close = super.close(cause)
-        val job = attachedJob
-        if (close && job != null && cause != null) {
-            if (cause is CancellationException) {
-                job.cancel(cause)
-            } else {
-                job.cancel("Channel is cancelled", cause)
-            }
-        }
-
-        return close
+        TODO("Not yet implemented")
     }
 
-    override fun toString(): String {
-        val hashCode = hashCode().toString(16)
-        return "ByteChannel[0x$hashCode, job: $attachedJob, cause: ${closedCause}]"
+    override fun flush() {
+        TODO("Not yet implemented")
     }
 
-    private suspend fun writeAvailableSuspend(src: CPointer<ByteVar>, offset: Long, length: Long): Int {
-        awaitFreeSpace()
-        return writeAvailable(src, offset, length)
+    override fun attachJob(job: kotlinx.coroutines.Job) {
+        TODO("Not yet implemented")
     }
 
-    private fun tryWriteCPointer(src: CPointer<ByteVar>, offset: Long, length: Long): Int {
-        val size = minOf(length, availableForWrite.toLong(), Int.MAX_VALUE.toLong()).toInt()
-        val ptr: CPointer<ByteVar> = (src + offset)!!
-        writable.writeFully(ptr, 0, size)
-        return size
+    override val availableForRead: kotlin.Int
+        get() = TODO("Not yet implemented")
+    override val isClosedForRead: kotlin.Boolean
+        get() = TODO("Not yet implemented")
+    override val isClosedForWrite: kotlin.Boolean
+        get() = TODO("Not yet implemented")
+    override var readByteOrder: io.ktor.utils.io.core.ByteOrder
+        get() = TODO("Not yet implemented")
+        set(value) {}
+    override val totalBytesRead: kotlin.Long
+        get() = TODO("Not yet implemented")
+
+    override suspend fun readAvailable(dst: kotlin.ByteArray, offset: kotlin.Int, length: kotlin.Int): kotlin.Int {
+        TODO("Not yet implemented")
     }
 
-    private fun tryReadCPointer(dst: CPointer<ByteVar>, offset: Long, length: Long): Int {
-        val size = minOf(length, availableForRead.toLong(), Int.MAX_VALUE.toLong()).toInt()
-        val ptr: CPointer<ByteVar> = (dst + offset)!!
-        readable.readFully(ptr, 0, size)
-        return size
+    override suspend fun readAvailable(dst: Buffer): kotlin.Int {
+        TODO("Not yet implemented")
     }
+
+    override suspend fun readAvailable(
+        dst: kotlinx.cinterop.CPointer<kotlinx.cinterop.ByteVar>,
+        offset: kotlin.Int,
+        length: kotlin.Int
+    ): kotlin.Int {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun readAvailable(
+        dst: kotlinx.cinterop.CPointer<kotlinx.cinterop.ByteVar>,
+        offset: kotlin.Long,
+        length: kotlin.Long
+    ): kotlin.Int {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun readFully(dst: kotlin.ByteArray, offset: kotlin.Int, length: kotlin.Int) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun readFully(dst: Buffer, n: kotlin.Int) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun readFully(
+        dst: kotlinx.cinterop.CPointer<kotlinx.cinterop.ByteVar>,
+        offset: kotlin.Int,
+        length: kotlin.Int
+    ) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun readFully(
+        dst: kotlinx.cinterop.CPointer<kotlinx.cinterop.ByteVar>,
+        offset: kotlin.Long,
+        length: kotlin.Long
+    ) {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun readPacket(
+        size: kotlin.Int,
+        headerSizeHint: kotlin.Int
+    ): io.ktor.utils.io.core.ByteReadPacket {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun readRemaining(
+        limit: kotlin.Long,
+        headerSizeHint: kotlin.Int
+    ): io.ktor.utils.io.core.ByteReadPacket {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun readLong(): kotlin.Long {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun readInt(): kotlin.Int {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun readShort(): kotlin.Short {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun readByte(): kotlin.Byte {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun readBoolean(): kotlin.Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun readDouble(): kotlin.Double {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun readFloat(): kotlin.Float {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun <A : kotlin.text.Appendable> readUTF8LineTo(out: A, limit: kotlin.Int): kotlin.Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun readUTF8Line(limit: kotlin.Int): kotlin.String? {
+        TODO("Not yet implemented")
+    }
+
+    override fun cancel(cause: kotlin.Throwable?): kotlin.Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun discard(max: kotlin.Long): kotlin.Long {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun peekTo(
+        destination: io.ktor.utils.io.bits.Memory,
+        destinationOffset: kotlin.Long,
+        offset: kotlin.Long,
+        min: kotlin.Long,
+        max: kotlin.Long
+    ): kotlin.Long {
+        TODO("Not yet implemented")
+    }
+
+    override val availableForWrite: kotlin.Int
+        get() = TODO("Not yet implemented")
 }

@@ -150,9 +150,26 @@ private fun CoroutineScope.skipCancels(
     input: ByteReadChannel,
     output: ByteWriteChannel
 ): Job = launch {
+    var cancel = false
     try {
+        while (true) {
+            val read = input.read { source, start, endExclusive ->
+                if (cancel) {
+                    return@read endExclusive.toInt()
+                }
+                val count = try {
+                    output.writeFully(source, start, endExclusive)
+                    endExclusive
+                } catch (_: Throwable) {
+                    cancel = true
+                    endExclusive
+                }
+
+                count.toInt()
+            }
+        }
+
         input.readSuspendableSession {
-            var cancel = false
             while (await()) {
                 val buffer = request() ?: break
                 if (cancel) {
