@@ -5,6 +5,7 @@
 package io.ktor.routing
 
 import io.ktor.http.*
+import io.ktor.util.*
 
 /**
  * Represents a parsed routing path. Consist of number of segments [parts]
@@ -60,3 +61,17 @@ enum class RoutingPathSegmentKind {
     Parameter
 }
 
+/**
+ * Parses a name out of segment specification
+ */
+@InternalAPI
+fun parseRoutingParameterName(value: String): String {
+    val prefix = value.substringBefore('{', "")
+    val suffix = value.substringAfterLast('}', "")
+    val signature = value.substring(prefix.length + 1, value.length - suffix.length - 1)
+    return when {
+        signature.endsWith("?") -> signature.dropLast(1)
+        signature.endsWith("...") -> signature.dropLast(3)
+        else -> signature
+    }
+}
