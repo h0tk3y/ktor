@@ -487,6 +487,7 @@ public final class io/ktor/features/DataConversion : io/ktor/util/ConversionServ
 	public static final field Feature Lio/ktor/features/DataConversion$Feature;
 	public fun fromValues (Ljava/util/List;Ljava/lang/reflect/Type;)Ljava/lang/Object;
 	public fun fromValues (Ljava/util/List;Lkotlin/reflect/KType;)Ljava/lang/Object;
+	public fun supportedTypes ()Ljava/util/List;
 	public fun toValues (Ljava/lang/Object;)Ljava/util/List;
 }
 
@@ -495,6 +496,7 @@ public final class io/ktor/features/DataConversion$Configuration {
 	public final fun convert (Lkotlin/reflect/KClass;Lio/ktor/util/ConversionService;)V
 	public final fun convert (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)V
 	public final fun convert (Lkotlin/reflect/KType;Lio/ktor/util/ConversionService;)V
+	public final fun convert (Lkotlin/reflect/KType;Lkotlin/jvm/functions/Function1;)V
 }
 
 public final class io/ktor/features/DataConversion$Feature : io/ktor/application/ApplicationFeature {
@@ -538,6 +540,7 @@ public final class io/ktor/features/DelegatingConversionService : io/ktor/util/C
 	public final fun encode (Lkotlin/jvm/functions/Function1;)V
 	public fun fromValues (Ljava/util/List;Ljava/lang/reflect/Type;)Ljava/lang/Object;
 	public fun fromValues (Ljava/util/List;Lkotlin/reflect/KType;)Ljava/lang/Object;
+	public fun supportedTypes ()Ljava/util/List;
 	public fun toValues (Ljava/lang/Object;)Ljava/util/List;
 }
 
@@ -1797,6 +1800,7 @@ public final class io/ktor/util/DefaultConversionService : io/ktor/util/Conversi
 	public static final field INSTANCE Lio/ktor/util/DefaultConversionService;
 	public fun fromValues (Ljava/util/List;Ljava/lang/reflect/Type;)Ljava/lang/Object;
 	public fun fromValues (Ljava/util/List;Lkotlin/reflect/KType;)Ljava/lang/Object;
+	public fun supportedTypes ()Ljava/util/List;
 	public fun toValues (Ljava/lang/Object;)Ljava/util/List;
 }
 
